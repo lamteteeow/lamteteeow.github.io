@@ -67,15 +67,19 @@ def main():
     except ValueError:
         gdp_s = []
 
+    import math
+    
     # Process Wilshire
     wilshire_dates = [d for d in wilshire_s.index]
+    wilshire_values = [v if not math.isnan(v) else None for v in wilshire_s.values]
     wilshire_df = pl.DataFrame(
-        {"date": wilshire_dates, "wilshire": wilshire_s.values}
+        {"date": wilshire_dates, "wilshire": wilshire_values}
     ).drop_nulls()
 
     # Process GDP
     gdp_dates = [d for d in gdp_s.index]
-    gdp_df = pl.DataFrame({"date": gdp_dates, "gdp": gdp_s.values}).drop_nulls()
+    gdp_values = [v if not math.isnan(v) else None for v in gdp_s.values]
+    gdp_df = pl.DataFrame({"date": gdp_dates, "gdp": gdp_values}).drop_nulls()
 
     # Sort, group by month, and get the last value for Wilshire
     monthly_wilshire = (
