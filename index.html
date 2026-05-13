@@ -27,8 +27,8 @@
         h1 {
             text-align: center;
             font-weight: 700;
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
+            font-size: 2.0rem;
+            margin-bottom: 0.25rem;
             background: linear-gradient(90deg, #60a5fa, #a78bfa);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -36,28 +36,54 @@
         h2 {
             text-align: center;
             font-weight: 600;
-            font-size: 1.25rem;
+            font-size: 1.1rem;
             color: #d1d5db;
             margin-top: 0;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
         .header-container {
-            margin-bottom: 40px;
+            margin-bottom: 20px;
             border-bottom: 1px solid var(--border-color);
-            padding-bottom: 24px;
+            padding-bottom: 10px;
         }
-        .dashboard-grid {
+        .metrics-bar {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            background-color: transparent;
+            margin-bottom: 20px;
             max-width: 1400px;
-            margin: 0 auto;
+            margin-left: auto;
+            margin-right: auto;
         }
+        .metric {
+            text-align: center;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+        .metric-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+        .metric-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #9ca3af;
+            font-weight: 600;
+        }
+        .danger { color: var(--accent-red); }
+        .safe { color: var(--accent-green); }
+        
         .panel {
             background-color: var(--panel-bg);
             border: 1px solid var(--border-color);
             border-radius: 12px;
-            padding: 24px;
+            padding: 15px;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.25);
             transition: transform 0.2s ease-in-out;
         }
@@ -67,41 +93,11 @@
         .full-width {
             grid-column: 1 / -1;
         }
-        .metrics-bar {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            background-color: transparent;
-            margin-bottom: 40px;
-            max-width: 1400px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        .metric {
-            text-align: center;
-            background-color: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-        }
-        .metric-value {
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin-bottom: 8px;
-        }
-        .metric-label {
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: #9ca3af;
-            font-weight: 600;
-        }
-        .danger { color: var(--accent-red); }
-        .safe { color: var(--accent-green); }
+
         .chart-container {
             width: 100%;
-            height: 500px;
+            height: calc(100vh - 300px); /* Adaptive height based on viewport */
+            min-height: 400px;
         }
         /* Tabs Styling */
         .tabs-container {
@@ -199,7 +195,6 @@
         <div id="tab-yc" class="tab-content active">
             <div class="panel full-width">
                 <h2>Yield Curve (10Y - 2Y Spread)</h2>
-                <p class="indicator-desc"><strong>What it means:</strong> The Yield Curve Spread measures the difference between 10-year and 2-year Treasury yields. A negative spread (inversion) has historically been one of the most reliable leading indicators of an impending recession.</p>
                 <div id="chart-yc" class="chart-container"></div>
             </div>
         </div>
@@ -207,7 +202,6 @@
         <div id="tab-sahm" class="tab-content">
             <div class="panel full-width">
                 <h2>Sahm Rule Recession Indicator</h2>
-                <p class="indicator-desc"><strong>What it means:</strong> The Sahm Rule signals the start of a recession when the three-month moving average of the national unemployment rate rises by 0.50 percentage points or more relative to its low during the previous 12 months.</p>
                 <div id="chart-sahm" class="chart-container"></div>
             </div>
         </div>
@@ -215,7 +209,6 @@
         <div id="tab-buffett" class="tab-content">
             <div class="panel full-width">
                 <h2>Buffett Indicator (Market Cap / GDP Proxy)</h2>
-                <p class="indicator-desc"><strong>What it means:</strong> Often cited by Warren Buffett, this ratio compares total stock market valuation to GDP. An exceptionally high ratio suggests the market is overvalued and may be vulnerable to a downturn.</p>
                 <div id="chart-buffett" class="chart-container"></div>
             </div>
         </div>
