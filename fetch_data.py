@@ -41,9 +41,20 @@ def main():
     # 3. Recession Data (USRECP)
     recession = get_fred_data(fred, "USRECP")
     
-    # 4. Buffett Indicator (WILL5000PRFC / GDP)
-    wilshire = fred.get_series("WILL5000PRFC", observation_start="1970-01-01")
-    gdp = fred.get_series("GDP", observation_start="1970-01-01")
+    # 4. Buffett Indicator (WILL5000PR / GDP or fallback)
+    try:
+        wilshire = fred.get_series("WILL5000PR", observation_start="1970-01-01")
+    except ValueError:
+        try:
+            wilshire = fred.get_series("WILL5000INDFC", observation_start="1970-01-01")
+        except ValueError:
+            print("Warning: Wilshire 5000 series not found, falling back to SP500 as proxy.")
+            wilshire = fred.get_series("SP500", observation_start="1970-01-01")
+            
+    try:
+        gdp = fred.get_series("GDP", observation_start="1970-01-01")
+    except ValueError:
+        gdp = pd.Series(dtype=float)
     
     wilshire_df = pd.DataFrame({'date': wilshire.index, 'wilshire': wilshire.values}).dropna()
     gdp_df = pd.DataFrame({'date': gdp.index, 'gdp': gdp.values}).dropna()
