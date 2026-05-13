@@ -1,6 +1,6 @@
 import os
 import json
-import pandas as pd
+import polars as pl
 from datetime import datetime, timedelta
 from fredapi import Fred
 from dotenv import load_dotenv
@@ -15,10 +15,12 @@ if not FRED_API_KEY:
 def get_fred_data(fred, series_id, start_date="1970-01-01"):
     try:
         data = fred.get_series(series_id, observation_start=start_date)
-        df = pd.DataFrame({'date': data.index, 'value': data.values})
-        df = df.dropna()
-        df['date'] = df['date'].dt.strftime('%Y-%m-%d')
-        return df.to_dict('records')
+        # Convert index (dates) and values to a polars DataFrame
+        dates = [d.strftime('%Y-%m-%d') for d in data.index]
+        values = data.values
+        df = pl.DataFrame({'date': dates, 'value': values})
+        df = df.drop_nulls()
+        return df.to_dicts()
     except Exception as e:
         print(f"Error fetching {series_id}: {e}")
         return []
@@ -43,39 +45,56 @@ def main():
     
     # 4. Buffett Indicator (WILL5000PR / GDP or fallback)
     try:
-        wilshire = fred.get_series("WILL5000PR", observation_start="1970-01-01")
+        wilshire_s = fred.get_series("WILL5000PR", observation_start="1970-01-01")
     except ValueError:
         try:
-            wilshire = fred.get_series("WILL5000INDFC", observation_start="1970-01-01")
+            wilshire_s = fred.get_series("WILL5000INDFC", observation_start="1970-01-01")
         except ValueError:
             print("Warning: Wilshire 5000 series not found, falling back to SP500 as proxy.")
-            wilshire = fred.get_series("SP500", observation_start="1970-01-01")
+            wilshire_s = fred.get_series("SP500", observation_start="1970-01-01")
             
     try:
-        gdp = fred.get_series("GDP", observation_start="1970-01-01")
+        gdp_s = fred.get_series("GDP", observation_start="1970-01-01")
     except ValueError:
-        gdp = pd.Series(dtype=float)
+        gdp_s = []
+
+    # Process Wilshire
+    wilshire_dates = [d for d in wilshire_s.index]
+    wilshire_df = pl.DataFrame({'date': wilshire_dates, 'wilshire': wilshire_s.values}).drop_nulls()
     
-    wilshire_df = pd.DataFrame({'date': wilshire.index, 'wilshire': wilshire.values}).dropna()
-    gdp_df = pd.DataFrame({'date': gdp.index, 'gdp': gdp.values}).dropna()
+    # Process GDP
+    gdp_dates = [d for d in gdp_s.index]
+    gdp_df = pl.DataFrame({'date': gdp_dates, 'gdp': gdp_s.values}).drop_nulls()
+
+    # Sort, group by month, and get the last value for Wilshire
+    monthly_wilshire = (
+        wilshire_df
+        .with_columns(pl.col("date").dt.truncate("1mo").alias("month_start"))
+        .group_by("month_start")
+        .last()
+        .sort("month_start")
+    )
     
-    # Resample to monthly and forward fill GDP
-    wilshire_df.set_index('date', inplace=True)
-    gdp_df.set_index('date', inplace=True)
+    # Sort, group by month, get last value, and forward fill GDP
+    monthly_gdp = (
+        gdp_df
+        .with_columns(pl.col("date").dt.truncate("1mo").alias("month_start"))
+        .group_by("month_start")
+        .last()
+        .sort("month_start")
+        .with_columns(pl.col("gdp").forward_fill())
+    )
+
+    # Join Wilshire and GDP
+    buffett_df = monthly_wilshire.join(monthly_gdp, on="month_start", how="inner")
     
-    monthly_wilshire = wilshire_df.resample('ME').last()
-    monthly_gdp = gdp_df.resample('ME').last().ffill()
+    # Calculate ratio
+    buffett_df = buffett_df.with_columns((pl.col("wilshire") / pl.col("gdp")).alias("value"))
     
-    buffett_df = monthly_wilshire.join(monthly_gdp, how='inner')
-    # GDP is in billions, Wilshire is index (often proxy for billions in some series, but let's normalize)
-    # Actually, WILL5000PRFC is price index. WILL5000IND is total market index. 
-    # Let's just create a ratio that we normalize to 1.0 = historical average.
-    buffett_df['value'] = buffett_df['wilshire'] / buffett_df['gdp']
+    # Format date back to string
+    buffett_df = buffett_df.with_columns(pl.col("date").dt.strftime("%Y-%m-%d"))
     
-    # Normalize Buffett Indicator (Z-score or similar) to make it readable, but for now just raw ratio
-    buffett_df = buffett_df.reset_index()
-    buffett_df['date'] = buffett_df['date'].dt.strftime('%Y-%m-%d')
-    buffett_indicator = buffett_df[['date', 'value']].to_dict('records')
+    buffett_indicator = buffett_df.select(["date", "value"]).to_dicts()
 
     # Calculate Risk Score
     risk_points = 0
@@ -91,8 +110,9 @@ def main():
         
     # Simple threshold for Buffett proxy: if current is > 80th percentile
     if buffett_indicator:
-        vals = [v['value'] for v in buffett_indicator]
-        pct_80 = pd.Series(vals).quantile(0.8)
+        # Calculate threshold without pandas
+        vals = pl.Series([v['value'] for v in buffett_indicator])
+        pct_80 = vals.quantile(0.8)
         current_buffett = float(buffett_indicator[-1]['value'])
         if current_buffett > pct_80:
             risk_points += 1
@@ -102,9 +122,9 @@ def main():
     # Days since YC inversion
     days_inverted = 0
     if yield_curve:
-        yc_df = pd.DataFrame(yield_curve)
-        yc_df['date'] = pd.to_datetime(yc_df['date'])
-        yc_df = yc_df.sort_values('date', ascending=False)
+        yc_df = pl.DataFrame(yield_curve)
+        yc_df = yc_df.with_columns(pl.col('date').str.strptime(pl.Date, "%Y-%m-%d"))
+        yc_df = yc_df.sort('date', descending=True)
         
         for val in yc_df['value']:
             if float(val) < 0:
