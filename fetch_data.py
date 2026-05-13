@@ -63,8 +63,8 @@ def main():
     wilshire_df.set_index('date', inplace=True)
     gdp_df.set_index('date', inplace=True)
     
-    monthly_wilshire = wilshire_df.resample('M').last()
-    monthly_gdp = gdp_df.resample('M').last().ffill()
+    monthly_wilshire = wilshire_df.resample('ME').last()
+    monthly_gdp = gdp_df.resample('ME').last().ffill()
     
     buffett_df = monthly_wilshire.join(monthly_gdp, how='inner')
     # GDP is in billions, Wilshire is index (often proxy for billions in some series, but let's normalize)
