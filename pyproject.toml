@@ -1,0 +1,16 @@
+[project]
+name = "macro-pulse"
+version = "0.1.0"
+description = "A Recession Risk Dashboard"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fredapi>=0.5.1",
+    "pandas>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "requests>=2.31.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

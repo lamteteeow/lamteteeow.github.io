@@ -1,87 +1,266 @@
-<h1 align="center">Hi 👋, I'm Lam</h1>
-<h3 align="center">A master student in Computational Engineering from Vietnam</h3>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Macro Pulse - Recession Risk Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --panel-bg: #161b22;
+            --text-color: #c9d1d9;
+            --accent-red: #ff7b72;
+            --accent-green: #3fb950;
+            --accent-blue: #58a6ff;
+            --border-color: #30363d;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        h1, h2 {
+            text-align: center;
+            font-weight: 600;
+        }
+        .header-container {
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        .metrics-bar {
+            display: flex;
+            justify-content: space-around;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            max-width: 1400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .metric {
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        .metric-label {
+            font-size: 0.9em;
+            color: #8b949e;
+        }
+        .danger { color: var(--accent-red); }
+        .safe { color: var(--accent-green); }
+        .chart-container {
+            width: 100%;
+            height: 400px;
+        }
+        @media (max-width: 900px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
 
-<!-- <p align="left"> <img src="https://komarev.com/ghpvc/?username=johnnynunez&label=Profile%20views&color=0e75b6&style=flat" alt="johnnynunez" /> </p> -->
+    <div class="header-container">
+        <h1>The Macro Pulse</h1>
+        <p style="text-align: center; color: #8b949e;">Recession Risk Dashboard &bull; Last Updated: <span id="last-updated">Loading...</span></p>
+    </div>
 
-<!-- <p align="left"> <a href="https://github.com/ryo-ma/github-profile-trophy"><img src="https://github-profile-trophy.vercel.app/?username=johnnynunez" alt="johnnynunez" /></a> </p> -->
+    <div class="metrics-bar">
+        <div class="metric">
+            <div class="metric-value" id="risk-score">--%</div>
+            <div class="metric-label">Recession Risk Score</div>
+        </div>
+        <div class="metric">
+            <div class="metric-value" id="sahm-value">--</div>
+            <div class="metric-label">Sahm Rule (Threshold: 0.5)</div>
+        </div>
+        <div class="metric">
+            <div class="metric-value" id="yc-value">--</div>
+            <div class="metric-label">10Y-2Y Spread</div>
+        </div>
+        <div class="metric">
+            <div class="metric-value" id="days-inverted">--</div>
+            <div class="metric-label">Days Inverted</div>
+        </div>
+    </div>
 
-<!-- - 🧑🏽‍💻 I’m 27 years old. -->
-<!-- - 🤔 I'm developer using Python, C++, Javascript and I use a variety of frameworks oriented to AI, Tensorflow, PyTorch, AWS. -->
-<!-- - 🔭 I’m currently working on [HupBa Group](https://hupba.com/). -->
-<!-- - 🌱 I’m currently learning **Computer Vision, Generative AI and Robotics**. -->
-<!-- - 📲 I’m really interested in technology in general. From hardware to software in any field, Human Robot Objects Interactions! -->
-<!-- - 📐 I am currently starting PhD in Generative AI and Robotics. -->
-<!-- - 📫 How to reach me: on Universitat de Barcelona and Computer Vision Center. (**johnnynuca14@gmail.com**) -->
-<!-- - 🚀 Researcher member on [Jetson AI Lab Group](https://www.jetson-ai-lab.com/research.html). -->
-<!-- - 💬 Ask me about all you want. I have several interesting repositories that you can see. -->
+    <div class="dashboard-grid">
+        <div class="panel full-width">
+            <h2>Yield Curve (10Y - 2Y Spread)</h2>
+            <div id="chart-yc" class="chart-container"></div>
+        </div>
+        
+        <div class="panel">
+            <h2>Sahm Rule Recession Indicator</h2>
+            <div id="chart-sahm" class="chart-container"></div>
+        </div>
+        
+        <div class="panel">
+            <h2>Buffett Indicator (Market Cap / GDP Proxy)</h2>
+            <div id="chart-buffett" class="chart-container"></div>
+        </div>
+    </div>
 
-<h3 align="left">Connect with me:</h3>
-<p align="left">
-<!-- <a href="https://twitter.com/johnnync13" target="blank"><img align="center" src="https://raw.githubusercontent.com/rahuldkjain/github-profile-readme-generator/master/src/images/icons/Social/twitter.svg" alt="johnnync13" height="30" width="40" /></a> -->
-<a href="https://linkedin.com/in/lam-tran-488ba521a" target="blank"><img align="center" src="https://raw.githubusercontent.com/rahuldkjain/github-profile-readme-generator/master/src/images/icons/Social/linked-in-alt.svg" alt="lamteteeow" height="30" width="40" /></a>
-<!-- <a href="https://kaggle.com/johnnync13" target="blank"><img align="center" src="https://raw.githubusercontent.com/rahuldkjain/github-profile-readme-generator/master/src/images/icons/Social/kaggle.svg" alt="johnnync13" height="30" width="40" /></a> -->
-<!-- <a href="https://instagram.com/johnny.ia" target="blank"><img align="center" src="https://raw.githubusercontent.com/rahuldkjain/github-profile-readme-generator/master/src/images/icons/Social/instagram.svg" alt="johnny.ia" height="30" width="40" /></a> -->
-<!-- <a href="https://medium.com/@johnnynuca14" target="blank"><img align="center" src="https://raw.githubusercontent.com/rahuldkjain/github-profile-readme-generator/master/src/images/icons/Social/medium.svg" alt="@johnnynuca14" height="30" width="40" /></a> -->
-<!-- <a href="https://www.leetcode.com/johnnync13" target="blank"><img align="center" src="https://raw.githubusercontent.com/rahuldkjain/github-profile-readme-generator/master/src/images/icons/Social/leet-code.svg" alt="johnnync13" height="30" width="40" /></a> -->
-</p>
+    <script>
+        // Plotly default layout styling for Dark Mode
+        const darkLayout = {
+            plot_bgcolor: '#161b22',
+            paper_bgcolor: '#161b22',
+            font: { color: '#c9d1d9' },
+            xaxis: { 
+                gridcolor: '#30363d',
+                zerolinecolor: '#30363d',
+                type: 'date'
+            },
+            yaxis: { 
+                gridcolor: '#30363d',
+                zerolinecolor: '#8b949e'
+            },
+            margin: { t: 40, r: 20, l: 40, b: 40 },
+            showlegend: false
+        };
 
-<h3 align="left">Languages and Tools:</h3>
-<p align="left"> 
-    <!-- <a href="https://developer.android.com" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/android/android-original-wordmark.svg" alt="android" width="40" height="40"/> </a> -->
-    <a href="https://www.arduino.cc/" target="_blank" rel="noreferrer"> <img src="https://cdn.worldvectorlogo.com/logos/arduino-1.svg" alt="arduino" width="40" height="40"/> </a> 
-    <!-- <a href="https://aws.amazon.com" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/amazonwebservices/amazonwebservices-original-wordmark.svg" alt="aws" width="40" height="40"/> </a>  -->
-    <!-- <a href="https://azure.microsoft.com/en-in/" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/microsoft_azure/microsoft_azure-icon.svg" alt="azure" width="40" height="40"/> </a>  -->
-    <a href="https://www.gnu.org/software/bash/" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/gnu_bash/gnu_bash-icon.svg" alt="bash" width="40" height="40"/> </a> 
-    <a href="https://www.blender.org/" target="_blank" rel="noreferrer"> <img src="https://download.blender.org/branding/community/blender_community_badge_white.svg" alt="blender" width="40" height="40"/> </a> 
-    <!-- <a href="https://getbootstrap.com" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/bootstrap/bootstrap-plain-wordmark.svg" alt="bootstrap" width="40" height="40"/> </a>  -->
-    <a href="https://www.cprogramming.com/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/c/c-original.svg" alt="c" width="40" height="40"/> </a> 
-    <!-- <a href="https://circleci.com" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/circleci/circleci-icon.svg" alt="circleci" width="40" height="40"/> </a>  -->
-    <a href="https://www.w3schools.com/cpp/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/cplusplus/cplusplus-original.svg" alt="cplusplus" width="40" height="40"/> </a> 
-    <a href="https://www.w3schools.com/cs/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/csharp/csharp-original.svg" alt="csharp" width="40" height="40"/> </a> 
-    <a href="https://www.w3schools.com/css/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/css3/css3-original-wordmark.svg" alt="css3" width="40" height="40"/> </a> 
-    <a href="https://d3js.org/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/d3js/d3js-original.svg" alt="d3js" width="40" height="40"/> </a> 
-    <!-- <a href="https://www.djangoproject.com/" target="_blank" rel="noreferrer"> <img src="https://cdn.worldvectorlogo.com/logos/django.svg" alt="django" width="40" height="40"/> </a>  -->
-    <a href="https://www.docker.com/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/docker/docker-original-wordmark.svg" alt="docker" width="40" height="40"/> </a> 
-    <!-- <a href="https://flask.palletsprojects.com/" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/pocoo_flask/pocoo_flask-icon.svg" alt="flask" width="40" height="40"/> </a>  -->
-    <!-- <a href="https://cloud.google.com" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/google_cloud/google_cloud-icon.svg" alt="gcp" width="40" height="40"/> </a>  -->
-    <!-- <a href="https://git-scm.com/" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/git-scm/git-scm-icon.svg" alt="git" width="40" height="40"/> </a>  -->
-    <!-- <a href="https://heroku.com" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/heroku/heroku-icon.svg" alt="heroku" width="40" height="40"/> </a>  -->
-    <!-- <a href="https://www.w3.org/html/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/html5/html5-original-wordmark.svg" alt="html5" width="40" height="40"/> </a>  -->
-    <a href="https://www.java.com" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/java/java-original.svg" alt="java" width="40" height="40"/> </a> 
-    <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/javascript/javascript-original.svg" alt="javascript" width="40" height="40"/> </a> 
-    <!-- <a href="https://www.jenkins.io" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/jenkins/jenkins-icon.svg" alt="jenkins" width="40" height="40"/> </a>  -->
-    <!-- <a href="https://kubernetes.io" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/kubernetes/kubernetes-icon.svg" alt="kubernetes" width="40" height="40"/> </a>  -->
-    <a href="https://www.linux.org/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/linux/linux-original.svg" alt="linux" width="40" height="40"/> </a> 
-    <a href="https://www.mathworks.com/" target="_blank" rel="noreferrer"> <img src="https://upload.wikimedia.org/wikipedia/commons/2/21/Matlab_Logo.png" alt="matlab" width="40" height="40"/> </a> 
-    <!-- <a href="https://www.mongodb.com/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/mongodb/mongodb-original-wordmark.svg" alt="mongodb" width="40" height="40"/> </a> -->
-    <a href="https://nodejs.org" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/nodejs/nodejs-original-wordmark.svg" alt="nodejs" width="40" height="40"/> </a> 
-    <a href="https://opencv.org/" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/opencv/opencv-icon.svg" alt="opencv" width="40" height="40"/> </a> 
-    <a href="https://pandas.pydata.org/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/2ae2a900d2f041da66e950e4d48052658d850630/icons/pandas/pandas-original.svg" alt="pandas" width="40" height="40"/> </a> 
-    <!-- <a href="https://www.postgresql.org" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/postgresql/postgresql-original-wordmark.svg" alt="postgresql" width="40" height="40"/> </a>  -->
-    <!-- <a href="https://postman.com" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/getpostman/getpostman-icon.svg" alt="postman" width="40" height="40"/> </a>  -->
-    <a href="https://www.python.org" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/python/python-original.svg" alt="python" width="40" height="40"/> </a> 
-    <a href="https://pytorch.org/" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/pytorch/pytorch-icon.svg" alt="pytorch" width="40" height="40"/> </a> 
-    <!-- <a href="https://www.qt.io/" target="_blank" rel="noreferrer"> <img src="https://upload.wikimedia.org/wikipedia/commons/0/0b/Qt_logo_2016.svg" alt="qt" width="40" height="40"/> </a>  -->
-    <a href="https://scikit-learn.org/" target="_blank" rel="noreferrer"> <img src="https://upload.wikimedia.org/wikipedia/commons/0/05/Scikit_learn_logo_small.svg" alt="scikit_learn" width="40" height="40"/> </a> 
-    <a href="https://seaborn.pydata.org/" target="_blank" rel="noreferrer"> <img src="https://seaborn.pydata.org/_images/logo-mark-lightbg.svg" alt="seaborn" width="40" height="40"/> </a> 
-    <!-- <a href="https://www.selenium.dev" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/detain/svg-logos/780f25886640cef088af994181646db2f6b1a3f8/svg/selenium-logo.svg" alt="selenium" width="40" height="40"/> </a>  -->
-    <!-- <a href="https://symfony.com" target="_blank" rel="noreferrer"> <img src="https://symfony.com/logos/symfony_black_03.svg" alt="symfony" width="40" height="40"/> </a>  -->
-    <a href="https://www.tensorflow.org" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/tensorflow/tensorflow-icon.svg" alt="tensorflow" width="40" height="40"/> </a> 
-    <!-- <a href="https://travis-ci.org" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/travis-ci/travis-ci-icon.svg" alt="travisci" width="40" height="40"/> </a>  -->
-    <!-- <a href="https://www.typescriptlang.org/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/typescript/typescript-original.svg" alt="typescript" width="40" height="40"/> </a>  -->
-    <a href="https://unity.com/" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/unity3d/unity3d-icon.svg" alt="unity" width="40" height="40"/> </a> 
-    <a href="https://unrealengine.com/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/kenangundogan/fontisto/036b7eca71aab1bef8e6a0518f7329f13ed62f6b/icons/svg/brand/unreal-engine.svg" alt="unreal" width="40" height="40"/> </a> 
-    <a href="https://vuejs.org/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/vuejs/vuejs-original-wordmark.svg" alt="vuejs" width="40" height="40"/> </a> 
-    <!-- <a href="https://vuetifyjs.com/en/" target="_blank" rel="noreferrer"> <img src="https://bestofjs.org/logos/vuetify.svg" alt="vuetify" width="40" height="40"/> </a> </p> -->
+        function generateRecessionShapes(recessionData) {
+            const shapes = [];
+            let inRecession = false;
+            let startDate = null;
 
+            // Sort data chronologically
+            recessionData.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-<!-- <h3 align="left">Support:</h3> -->
-<!-- <p><a href="https://www.buymeacoffee.com/johnnycano"> <img align="left" src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" height="50" width="210" alt="johnnycano" /></a><a href="https://ko-fi.com/johnnycano"> <img align="left" src="https://cdn.ko-fi.com/cdn/kofi3.png?v=3" height="50" width="210" alt="johnnycano" /></a></p><br><br><br> -->
+            recessionData.forEach(point => {
+                const val = parseFloat(point.value);
+                if (val === 1 && !inRecession) {
+                    inRecession = true;
+                    startDate = point.date;
+                } else if (val === 0 && inRecession) {
+                    inRecession = false;
+                    shapes.push({
+                        type: 'rect',
+                        xref: 'x',
+                        yref: 'paper',
+                        x0: startDate,
+                        x1: point.date,
+                        y0: 0,
+                        y1: 1,
+                        fillcolor: 'rgba(128, 128, 128, 0.3)',
+                        line: { width: 0 },
+                        layer: 'below'
+                    });
+                }
+            });
+            // Close open recession
+            if (inRecession) {
+                shapes.push({
+                    type: 'rect',
+                    xref: 'x',
+                    yref: 'paper',
+                    x0: startDate,
+                    x1: new Date().toISOString().split('T')[0],
+                    y0: 0,
+                    y1: 1,
+                    fillcolor: 'rgba(128, 128, 128, 0.3)',
+                    line: { width: 0 },
+                    layer: 'below'
+                });
+            }
+            return shapes;
+        }
 
+        async function initDashboard() {
+            try {
+                const response = await fetch('data/macro_risk.json');
+                if (!response.ok) throw new Error('Data file not found');
+                const data = await response.json();
 
-<!-- <p><img align="left" src="https://github-readme-stats.vercel.app/api/top-langs?username=johnnynunez&show_icons=true&locale=en&layout=compact" alt="johnnynunez" /></p> -->
+                // Update UI Metrics
+                document.getElementById('last-updated').textContent = new Date(data.last_updated).toLocaleString();
+                
+                const scoreEl = document.getElementById('risk-score');
+                scoreEl.textContent = `${data.risk_score}%`;
+                scoreEl.className = `metric-value ${data.risk_score >= 66 ? 'danger' : data.risk_score <= 33 ? 'safe' : ''}`;
 
-<!-- <p>&nbsp;<img align="center" src="https://github-readme-stats.vercel.app/api?username=johnnynunez&show_icons=true&locale=en" alt="johnnynunez" /></p> -->
+                const sahmEl = document.getElementById('sahm-value');
+                sahmEl.textContent = data.current_metrics.sahm_rule.toFixed(2);
+                sahmEl.className = `metric-value ${data.current_metrics.sahm_rule >= 0.5 ? 'danger' : 'safe'}`;
 
-<!-- <p><img align="center" src="https://github-readme-streak-stats.herokuapp.com/?user=johnnynunez&" alt="johnnynunez" /></p> -->
+                const ycEl = document.getElementById('yc-value');
+                ycEl.textContent = `${data.current_metrics.yield_curve.toFixed(2)}%`;
+                ycEl.className = `metric-value ${data.current_metrics.yield_curve <= 0 ? 'danger' : 'safe'}`;
 
+                document.getElementById('days-inverted').textContent = data.days_since_inversion;
+
+                const recessionShapes = generateRecessionShapes(data.series.recession);
+
+                // Chart 1: Yield Curve
+                const ycLayout = { ...darkLayout, shapes: [
+                    ...recessionShapes,
+                    { type: 'line', xref: 'paper', x0: 0, x1: 1, y0: 0, y1: 0, line: { color: '#ff7b72', width: 2, dash: 'dash' } }
+                ]};
+                Plotly.newPlot('chart-yc', [{
+                    x: data.series.yield_curve.map(d => d.date),
+                    y: data.series.yield_curve.map(d => parseFloat(d.value)),
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: '#58a6ff' }
+                }], ycLayout, {responsive: true});
+
+                // Chart 2: Sahm Rule
+                const sahmLayout = { ...darkLayout, shapes: [
+                    ...recessionShapes,
+                    { type: 'line', xref: 'paper', x0: 0, x1: 1, y0: 0.5, y1: 0.5, line: { color: '#ff7b72', width: 2, dash: 'dash' } }
+                ]};
+                Plotly.newPlot('chart-sahm', [{
+                    x: data.series.sahm_rule.map(d => d.date),
+                    y: data.series.sahm_rule.map(d => parseFloat(d.value)),
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: '#d2a8ff' }
+                }], sahmLayout, {responsive: true});
+
+                // Chart 3: Buffett Indicator
+                const buffettLayout = { ...darkLayout, shapes: recessionShapes };
+                Plotly.newPlot('chart-buffett', [{
+                    x: data.series.buffett_indicator.map(d => d.date),
+                    y: data.series.buffett_indicator.map(d => parseFloat(d.value)),
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: '#3fb950' }
+                }], buffettLayout, {responsive: true});
+
+            } catch (error) {
+                console.error("Error loading dashboard data:", error);
+                document.getElementById('risk-score').textContent = 'Error';
+            }
+        }
+
+        initDashboard();
+    </script>
+</body>
+</html>

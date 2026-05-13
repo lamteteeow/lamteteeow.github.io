@@ -1,2 +1,0 @@
-# lamteteeow.github.io
-Autobiowebiste
