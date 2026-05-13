@@ -1,10 +1,10 @@
 {
-  "last_updated": "2026-05-13T17:08:21Z",
+  "last_updated": "2026-05-13T22:04:27Z",
   "risk_score": 33,
   "days_since_inversion": 0,
   "current_metrics": {
     "sahm_rule": 0.13,
-    "yield_curve": 0.46
+    "yield_curve": 0.48
   },
   "series": {
     "yield_curve": [
@@ -49939,6 +49939,10 @@
       {
         "date": "2026-05-12",
         "value": 0.46
+      },
+      {
+        "date": "2026-05-13",
+        "value": 0.48
       }
     ],
     "sahm_rule": [
