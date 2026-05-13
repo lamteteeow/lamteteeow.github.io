@@ -20,10 +20,12 @@ def get_fred_data(fred, series_id, start_date="1970-01-01"):
     try:
         data = fred.get_series(series_id, observation_start=start_date)
         # Convert index (dates) and values to a polars DataFrame
+        import math
         dates = [d.strftime("%Y-%m-%d") for d in data.index]
-        values = data.values
+        values = [float(v) if not math.isnan(v) else None for v in data.values]
         df = pl.DataFrame({"date": dates, "value": values})
         df = df.drop_nulls()
+        df = df.filter(~pl.col("value").is_nan())
         return df.to_dicts()
     except Exception as e:
         print(f"Error fetching {series_id}: {e}")
