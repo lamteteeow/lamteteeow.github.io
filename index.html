@@ -207,12 +207,14 @@
                 scoreEl.className = `metric-value ${data.risk_score >= 66 ? 'danger' : data.risk_score <= 33 ? 'safe' : ''}`;
 
                 const sahmEl = document.getElementById('sahm-value');
-                sahmEl.textContent = data.current_metrics.sahm_rule.toFixed(2);
-                sahmEl.className = `metric-value ${data.current_metrics.sahm_rule >= 0.5 ? 'danger' : 'safe'}`;
+                const sahmVal = data.current_metrics.sahm_rule;
+                sahmEl.textContent = sahmVal != null ? sahmVal.toFixed(2) : '--';
+                sahmEl.className = `metric-value ${sahmVal >= 0.5 ? 'danger' : 'safe'}`;
 
                 const ycEl = document.getElementById('yc-value');
-                ycEl.textContent = `${data.current_metrics.yield_curve.toFixed(2)}%`;
-                ycEl.className = `metric-value ${data.current_metrics.yield_curve <= 0 ? 'danger' : 'safe'}`;
+                const ycVal = data.current_metrics.yield_curve;
+                ycEl.textContent = ycVal != null ? `${ycVal.toFixed(2)}%` : '--';
+                ycEl.className = `metric-value ${ycVal <= 0 ? 'danger' : 'safe'}`;
 
                 document.getElementById('days-inverted').textContent = data.days_since_inversion;
 
