@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import polars as pl
 from dotenv import load_dotenv
@@ -17,10 +17,13 @@ if not FRED_API_KEY:
 
 
 def get_fred_data(fred, series_id, start_date="1970-01-01"):
+    if not fred:
+        return None
     try:
         data = fred.get_series(series_id, observation_start=start_date)
         # Convert index (dates) and values to a polars DataFrame
         import math
+
         dates = [d.strftime("%Y-%m-%d") for d in data.index]
         values = [float(v) if not math.isnan(v) else None for v in data.values]
         df = pl.DataFrame({"date": dates, "value": values})
@@ -29,112 +32,140 @@ def get_fred_data(fred, series_id, start_date="1970-01-01"):
         return df.to_dicts()
     except Exception as e:
         print(f"Error fetching {series_id}: {e}")
-        return []
+        return None
 
 
 def main():
-    try:
-        fred = Fred(api_key=FRED_API_KEY)
-    except Exception as e:
-        print(f"Failed to initialize FRED API: {e}")
-        return
+    fred = None
+    if FRED_API_KEY:
+        try:
+            fred = Fred(api_key=FRED_API_KEY)
+        except Exception as e:
+            print(f"Failed to initialize FRED API: {e}")
 
-    print('Fetching data from FRED...')
+    print("Fetching data from FRED...")
+
+    fetched_any_new_data = False
 
     # Load previous data to fallback on failure
     previous_data = None
-    if os.path.exists('data/macro_risk.json'):
+    if os.path.exists("data/macro_risk.json"):
         try:
-            with open('data/macro_risk.json', 'r') as f:
+            with open("data/macro_risk.json", "r") as f:
                 previous_data = json.load(f)
         except Exception:
             pass
 
-    def get_fred_data_with_fallback(series_id, fallback_key, start_date='1970-01-01'):
-        try:
-            res = get_fred_data(fred, series_id, start_date)
-            if not res:
-                raise ValueError('Empty data returned')
+    def get_fred_data_with_fallback(series_id, fallback_key, start_date="1970-01-01"):
+        nonlocal fetched_any_new_data
+        res = get_fred_data(fred, series_id, start_date)
+        if res is not None and len(res) > 0:
+            fetched_any_new_data = True
             return res
-        except Exception as e:
-            print(f'Error fetching {series_id}: {e}')
-            if previous_data and 'series' in previous_data and fallback_key in previous_data['series']:
-                print(f'Using cached data for {series_id}')
-                return previous_data['series'][fallback_key]
-            return []
 
+        # Fallback to cached data
+        if (
+            previous_data
+            and "series" in previous_data
+            and fallback_key in previous_data["series"]
+        ):
+            print(f"Using cached data for {series_id} ({fallback_key})")
+            return previous_data["series"][fallback_key]
+        return []
 
     # 1. Yield Curve (T10Y2Y)
     yield_curve = get_fred_data_with_fallback("T10Y2Y", "yield_curve")
 
     # 2. Sahm Rule (SAHMREALTIME)
-    sahm_rule = get_fred_data(fred, "SAHMREALTIME")
+    sahm_rule = get_fred_data_with_fallback("SAHMREALTIME", "sahm_rule")
 
     # 3. Recession Data (USRECP)
-    recession = get_fred_data(fred, "USRECP")
+    recession = get_fred_data_with_fallback("USRECP", "recession")
 
     # 4. Buffett Indicator (WILL5000PR / GDP or fallback)
-    try:
-        wilshire_s = fred.get_series("WILL5000PR", observation_start="1970-01-01")
-    except ValueError:
+    wilshire_s = None
+    if fred:
         try:
-            wilshire_s = fred.get_series(
-                "WILL5000INDFC", observation_start="1970-01-01"
-            )
-        except ValueError:
-            print(
-                "Warning: Wilshire 5000 series not found, falling back to SP500 as proxy."
-            )
-            wilshire_s = fred.get_series("SP500", observation_start="1970-01-01")
+            wilshire_s = fred.get_series("WILL5000PR", observation_start="1970-01-01")
+        except Exception:
+            try:
+                wilshire_s = fred.get_series(
+                    "WILL5000INDFC", observation_start="1970-01-01"
+                )
+            except Exception:
+                print(
+                    "Warning: Wilshire 5000 series not found, falling back to SP500 as proxy."
+                )
+                try:
+                    wilshire_s = fred.get_series(
+                        "SP500", observation_start="1970-01-01"
+                    )
+                except Exception:
+                    wilshire_s = None
 
-    try:
-        gdp_s = fred.get_series("GDP", observation_start="1970-01-01")
-    except ValueError:
-        gdp_s = []
+    gdp_s = None
+    if fred:
+        try:
+            gdp_s = fred.get_series("GDP", observation_start="1970-01-01")
+        except Exception:
+            gdp_s = None
 
     import math
-    
-    # Process Wilshire
-    wilshire_dates = [d for d in wilshire_s.index]
-    wilshire_values = [v if not math.isnan(v) else None for v in wilshire_s.values]
-    wilshire_df = pl.DataFrame(
-        {"date": wilshire_dates, "wilshire": wilshire_values}
-    ).drop_nulls()
 
-    # Process GDP
-    gdp_dates = [d for d in gdp_s.index]
-    gdp_values = [v if not math.isnan(v) else None for v in gdp_s.values]
-    gdp_df = pl.DataFrame({"date": gdp_dates, "gdp": gdp_values}).drop_nulls()
+    buffett_indicator = []
+    if wilshire_s is not None and gdp_s is not None:
+        fetched_any_new_data = True
+        # Process Wilshire
+        wilshire_dates = [d for d in wilshire_s.index]
+        wilshire_values = [v if not math.isnan(v) else None for v in wilshire_s.values]
+        wilshire_df = pl.DataFrame(
+            {"date": wilshire_dates, "wilshire": wilshire_values}
+        ).drop_nulls()
 
-    # Sort, group by month, and get the last value for Wilshire
-    monthly_wilshire = (
-        wilshire_df.with_columns(pl.col("date").dt.truncate("1mo").alias("month_start"))
-        .group_by("month_start")
-        .last()
-        .sort("month_start")
-    )
+        # Process GDP
+        gdp_dates = [d for d in gdp_s.index]
+        gdp_values = [v if not math.isnan(v) else None for v in gdp_s.values]
+        gdp_df = pl.DataFrame({"date": gdp_dates, "gdp": gdp_values}).drop_nulls()
 
-    # Sort, group by month, get last value, and forward fill GDP
-    monthly_gdp = (
-        gdp_df.with_columns(pl.col("date").dt.truncate("1mo").alias("month_start"))
-        .group_by("month_start")
-        .last()
-        .sort("month_start")
-        .with_columns(pl.col("gdp").forward_fill())
-    )
+        # Sort, group by month, and get the last value for Wilshire
+        monthly_wilshire = (
+            wilshire_df.with_columns(
+                pl.col("date").dt.truncate("1mo").alias("month_start")
+            )
+            .group_by("month_start")
+            .last()
+            .sort("month_start")
+        )
 
-    # Join Wilshire and GDP
-    buffett_df = monthly_wilshire.join(monthly_gdp, on="month_start", how="inner")
+        # Sort, group by month, get last value, and forward fill GDP
+        monthly_gdp = (
+            gdp_df.with_columns(pl.col("date").dt.truncate("1mo").alias("month_start"))
+            .group_by("month_start")
+            .last()
+            .sort("month_start")
+            .with_columns(pl.col("gdp").forward_fill())
+        )
 
-    # Calculate ratio
-    buffett_df = buffett_df.with_columns(
-        (pl.col("wilshire") / pl.col("gdp")).alias("value")
-    )
+        # Join Wilshire and GDP
+        buffett_df = monthly_wilshire.join(monthly_gdp, on="month_start", how="inner")
 
-    # Format date back to string
-    buffett_df = buffett_df.with_columns(pl.col("date").dt.strftime("%Y-%m-%d"))
+        # Calculate ratio
+        buffett_df = buffett_df.with_columns(
+            (pl.col("wilshire") / pl.col("gdp")).alias("value")
+        )
 
-    buffett_indicator = buffett_df.select(["date", "value"]).to_dicts()
+        # Format date back to string
+        buffett_df = buffett_df.with_columns(pl.col("date").dt.strftime("%Y-%m-%d"))
+
+        buffett_indicator = buffett_df.select(["date", "value"]).to_dicts()
+    else:
+        if (
+            previous_data
+            and "series" in previous_data
+            and "buffett_indicator" in previous_data["series"]
+        ):
+            print("Using cached data for buffett_indicator")
+            buffett_indicator = previous_data["series"]["buffett_indicator"]
 
     # Calculate Risk Score
     risk_points = 0
@@ -173,7 +204,7 @@ def main():
                 break
 
     output_data = {
-        "last_updated": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "last_updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "risk_score": risk_score,
         "days_since_inversion": days_inverted,
         "current_metrics": {"sahm_rule": current_sahm, "yield_curve": current_yc},
@@ -185,14 +216,18 @@ def main():
         },
     }
 
-    # Save to data/macro_risk.json
-    os.makedirs("data", exist_ok=True)
-    with open("data/macro_risk.json", "w") as f:
-        json.dump(output_data, f, indent=2)
-
-    print("Data successfully fetched and saved to data/macro_risk.json")
+    # Only save if we actually fetched at least SOME new data.
+    # This ensures that if the API is entirely down or the API key is missing/invalid,
+    # we don't overwrite the file with identical data (just to update the timestamp),
+    # which would cause unnecessary Git diffs and commits.
+    if fetched_any_new_data:
+        os.makedirs("data", exist_ok=True)
+        with open("data/macro_risk.json", "w") as f:
+            json.dump(output_data, f, indent=2)
+        print("Data successfully fetched and saved to data/macro_risk.json")
+    else:
+        print("No new data fetched. File not modified to prevent git diffs.")
 
 
 if __name__ == "__main__":
     main()
-
