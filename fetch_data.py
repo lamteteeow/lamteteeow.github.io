@@ -39,10 +39,33 @@ def main():
         print(f"Failed to initialize FRED API: {e}")
         return
 
-    print("Fetching data from FRED...")
+    print('Fetching data from FRED...')
+
+    # Load previous data to fallback on failure
+    previous_data = None
+    if os.path.exists('data/macro_risk.json'):
+        try:
+            with open('data/macro_risk.json', 'r') as f:
+                previous_data = json.load(f)
+        except Exception:
+            pass
+
+    def get_fred_data_with_fallback(series_id, fallback_key, start_date='1970-01-01'):
+        try:
+            res = get_fred_data(fred, series_id, start_date)
+            if not res:
+                raise ValueError('Empty data returned')
+            return res
+        except Exception as e:
+            print(f'Error fetching {series_id}: {e}')
+            if previous_data and 'series' in previous_data and fallback_key in previous_data['series']:
+                print(f'Using cached data for {series_id}')
+                return previous_data['series'][fallback_key]
+            return []
+
 
     # 1. Yield Curve (T10Y2Y)
-    yield_curve = get_fred_data(fred, "T10Y2Y")
+    yield_curve = get_fred_data_with_fallback("T10Y2Y", "yield_curve")
 
     # 2. Sahm Rule (SAHMREALTIME)
     sahm_rule = get_fred_data(fred, "SAHMREALTIME")
@@ -172,3 +195,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
