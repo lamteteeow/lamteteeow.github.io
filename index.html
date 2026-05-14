@@ -161,9 +161,8 @@
 </head>
 <body>
 
-    <div class="header-container">
-        <h1>The Macro Pulse</h1>
-        <p style="text-align: center; color: #8b949e;">Recession Risk Dashboard &bull; Last Updated: <span id="last-updated">Loading...</span></p>
+    <div style="text-align: right; color: #8b949e; margin-bottom: 20px; font-size: 0.85rem;">
+        Last Updated: <span id="last-updated">Loading...</span>
     </div>
 
     <div class="metrics-bar">
@@ -318,6 +317,18 @@
             window.dispatchEvent(new Event('resize'));
         }
 
+        function isInRecession(dateStr, shapes) {
+            const date = new Date(dateStr);
+            for (let i = 0; i < shapes.length; i++) {
+                if (shapes[i].type === 'rect') {
+                    if (date >= new Date(shapes[i].x0) && date <= new Date(shapes[i].x1)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         async function initDashboard() {
             try {
                 const response = await fetch('data/macro_risk.json');
@@ -345,6 +356,14 @@
 
                 const recessionShapes = generateRecessionShapes(data.series.recession);
 
+                // Apply custom hover text format for all charts
+                function generateHoverTemplate(xData, shapes, metricName) {
+                    return xData.map(date => {
+                        const recessionText = isInRecession(date, recessionShapes) ? "<br><b>Status: In Recession</b>" : "";
+                        return `%{x}<br>${metricName}: %{y:.2f}${recessionText}<extra></extra>`;
+                    });
+                }
+
                 // Chart 1: Yield Curve
                 const ycLayout = { ...darkLayout, shapes: [
                     ...recessionShapes,
@@ -356,7 +375,8 @@
                     type: 'scatter',
                     mode: 'lines',
                     name: '10Y-2Y Spread',
-                    line: { color: '#58a6ff', width: 2 }
+                    line: { color: '#58a6ff', width: 2 },
+                    hovertemplate: generateHoverTemplate(data.series.yield_curve.map(d => d.date), recessionShapes, "Spread")
                 }], ycLayout, {responsive: true});
 
                 // Chart 2: Sahm Rule
@@ -370,7 +390,8 @@
                     type: 'scatter',
                     mode: 'lines',
                     name: 'Sahm Indicator',
-                    line: { color: '#d2a8ff', width: 2 }
+                    line: { color: '#d2a8ff', width: 2 },
+                    hovertemplate: generateHoverTemplate(data.series.sahm_rule.map(d => d.date), recessionShapes, "Value")
                 }], sahmLayout, {responsive: true});
 
                 // Chart 3: Buffett Indicator
@@ -381,7 +402,8 @@
                     type: 'scatter',
                     mode: 'lines',
                     name: 'Market Cap / GDP Proxy',
-                    line: { color: '#3fb950', width: 2 }
+                    line: { color: '#3fb950', width: 2 },
+                    hovertemplate: generateHoverTemplate(data.series.buffett_indicator.map(d => d.date), recessionShapes, "Ratio")
                 }], buffettLayout, {responsive: true});
 
             } catch (error) {
