@@ -1,38 +1,103 @@
 import json
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
+from pathlib import Path
 
 import polars as pl
 from dotenv import load_dotenv
 from fredapi import Fred
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+)
 
-# Load environment variables
 load_dotenv()
 FRED_API_KEY = os.getenv("FRED_API_KEY")
 
 if not FRED_API_KEY:
-    print(
-        "Warning: FRED_API_KEY not found. Using dummy data for demonstration if API fails."
-    )
+    print("Warning: FRED_API_KEY not found. Using dummy data if API fails.")
 
 
-def get_fred_data(fred, series_id, start_date="1970-01-01"):
-    if not fred:
-        return None
-    try:
-        data = fred.get_series(series_id, observation_start=start_date)
-        # Convert index (dates) and values to a polars DataFrame
-        import math
+def monthly_downsample(records):
+    """Resample a list of {date, value} dicts to end-of-month values."""
+    if not records:
+        return []
+    df = pl.DataFrame(records)
+    df = df.with_columns(pl.col("date").str.strptime(pl.Date, "%Y-%m-%d"))
+    df = df.with_columns(pl.col("date").dt.truncate("1mo").alias("month_start"))
+    df = df.sort("date").group_by("month_start").last().sort("month_start")
+    df = df.with_columns(pl.col("date").dt.strftime("%Y-%m-%d"))
+    return df.select(["date", "value"]).to_dicts()
 
-        dates = [d.strftime("%Y-%m-%d") for d in data.index]
-        values = [float(v) if not math.isnan(v) else None for v in data.values]
-        df = pl.DataFrame({"date": dates, "value": values})
-        df = df.drop_nulls()
-        df = df.filter(~pl.col("value").is_nan())
-        return df.to_dicts()
-    except Exception as e:
-        print(f"Error fetching {series_id}: {e}")
-        return None
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=30),
+    retry=retry_if_exception_type((OSError, ValueError, Exception)),
+)
+def get_fred_data_retry(fred, series_id, start_date="1970-01-01"):
+    data = fred.get_series(series_id, observation_start=start_date)
+    import math
+
+    dates = [d.strftime("%Y-%m-%d") for d in data.index]
+    values = [float(v) if not math.isnan(v) else None for v in data.values]
+    df = pl.DataFrame({"date": dates, "value": values})
+    df = df.drop_nulls()
+    df = df.filter(~pl.col("value").is_nan())
+    return df.to_dicts()
+
+
+def sub_score_linear(value, low, high, direction="up"):
+    """Piecewise-linear sub-score in [0, 1]. direction='up': higher raw value = higher risk."""
+    if direction == "up":
+        if value <= low:
+            return 0.0
+        if value >= high:
+            return 1.0
+        return (value - low) / (high - low)
+    else:
+        if value >= low:
+            return 0.0
+        if value <= high:
+            return 1.0
+        return (low - value) / (low - high)
+
+
+def momentum_score(series, months=6):
+    """Risk score [0,1] based on how quickly a series is moving in the risky direction."""
+    if not series or len(series) < 2:
+        return 0.0
+    df = pl.DataFrame(series)
+    df = df.with_columns(pl.col("date").str.strptime(pl.Date, "%Y-%m-%d"))
+    df = df.sort("date")
+    latest_date = df["date"].max()
+    cutoff = latest_date - pl.duration(days=months * 30)
+    recent = df.filter(pl.col("date") >= cutoff)
+    if recent.height < 2:
+        return 0.0
+    first_val = float(recent[0, "value"])
+    last_val = float(recent[-1, "value"])
+    change = last_val - first_val
+    return abs(change) / (abs(first_val) + 0.001)
+
+
+def compute_rolling_percentile(series, window_days=3652):
+    """Compute the 90th percentile over a rolling ~10-year window using latest data window."""
+    if not series:
+        return 0
+    vals = pl.Series([float(v["value"]) for v in series])
+    df = pl.DataFrame(series)
+    df = df.with_columns(pl.col("date").str.strptime(pl.Date, "%Y-%m-%d"))
+    df = df.sort("date")
+    latest = df["date"].max()
+    cutoff = latest - pl.duration(days=window_days)
+    recent = df.filter(pl.col("date") >= cutoff)
+    if recent.height < 10:
+        return float(vals.quantile(0.9))
+    recent_vals = pl.Series([float(v) for v in recent["value"].to_list()])
+    return float(recent_vals.quantile(0.9))
 
 
 def main():
@@ -44,90 +109,93 @@ def main():
             print(f"Failed to initialize FRED API: {e}")
 
     print("Fetching data from FRED...")
-
     fetched_any_new_data = False
 
-    # Load previous data to fallback on failure
     previous_data = None
-    if os.path.exists("data/macro_risk.json"):
+    data_path = Path("data/macro_risk.json")
+    if data_path.exists():
         try:
-            with open("data/macro_risk.json", "r") as f:
-                previous_data = json.load(f)
+            previous_data = json.loads(data_path.read_text())
         except Exception:
             pass
 
-    def get_fred_data_with_fallback(series_id, fallback_key, start_date="1970-01-01"):
+    def fetch_with_fallback(series_id, fallback_key, start_date="1970-01-01"):
         nonlocal fetched_any_new_data
-        res = get_fred_data(fred, series_id, start_date)
-        if res is not None and len(res) > 0:
-            fetched_any_new_data = True
-            return res
+        if not fred:
+            return _cached_or_empty(fallback_key)
+        try:
+            res = get_fred_data_retry(fred, series_id, start_date)
+        except Exception as e:
+            print(f"Error fetching {series_id}: {e}")
+            return _cached_or_empty(fallback_key)
 
-        # Fallback to cached data
+        if res and len(res) > 0:
+            fetched_any_new_data = True
+            return monthly_downsample(res)
+        return _cached_or_empty(fallback_key)
+
+    def _cached_or_empty(key):
         if (
             previous_data
             and "series" in previous_data
-            and fallback_key in previous_data["series"]
+            and key in previous_data["series"]
         ):
-            print(f"Using cached data for {series_id} ({fallback_key})")
-            return previous_data["series"][fallback_key]
+            print(f"Using cached data for {key}")
+            return previous_data["series"][key]
+        print(f"No data available for {key}")
         return []
 
-    # 1. Yield Curve (T10Y2Y)
-    yield_curve = get_fred_data_with_fallback("T10Y2Y", "yield_curve")
+    # 1. Yield Curve
+    yield_curve = fetch_with_fallback("T10Y2Y", "yield_curve")
 
-    # 2. Sahm Rule (SAHMREALTIME)
-    sahm_rule = get_fred_data_with_fallback("SAHMREALTIME", "sahm_rule")
+    # 2. Sahm Rule
+    sahm_rule = fetch_with_fallback("SAHMREALTIME", "sahm_rule")
 
-    # 3. Recession Data (USRECP)
-    recession = get_fred_data_with_fallback("USRECP", "recession")
+    # 3. Recession shading
+    recession = fetch_with_fallback("USRECP", "recession")
 
-    # 4. Buffett Indicator (WILL5000PR / GDP or fallback)
+    # 4. LEI (Leading Economic Index)
+    lei = fetch_with_fallback("USSLIND", "lei")
+
+    # 5. Credit spread
+    credit_spread = fetch_with_fallback("BAA10Y", "credit_spread")
+
+    # 6. Unemployment (display only)
+    unemployment = fetch_with_fallback("UNRATE", "unemployment")
+
+    # 7. Buffett Indicator
+    buffett_indicator = []
     wilshire_s = None
-    if fred:
-        try:
-            wilshire_s = fred.get_series("WILL5000PR", observation_start="1970-01-01")
-        except Exception:
-            try:
-                wilshire_s = fred.get_series(
-                    "WILL5000INDFC", observation_start="1970-01-01"
-                )
-            except Exception:
-                print(
-                    "Warning: Wilshire 5000 series not found, falling back to SP500 as proxy."
-                )
-                try:
-                    wilshire_s = fred.get_series(
-                        "SP500", observation_start="1970-01-01"
-                    )
-                except Exception:
-                    wilshire_s = None
-
     gdp_s = None
+
+    if fred:
+        for series_id in ("WILL5000INDFC", "WILL5000PRFC", "SP500"):
+            try:
+                wilshire_s = get_fred_data_retry(fred, series_id)
+                break
+            except Exception:
+                continue
+
     if fred:
         try:
-            gdp_s = fred.get_series("GDP", observation_start="1970-01-01")
+            gdp_s = get_fred_data_retry(fred, "GDP")
         except Exception:
             gdp_s = None
 
     import math
 
-    buffett_indicator = []
     if wilshire_s is not None and gdp_s is not None:
         fetched_any_new_data = True
-        # Process Wilshire
         wilshire_dates = [d for d in wilshire_s.index]
         wilshire_values = [v if not math.isnan(v) else None for v in wilshire_s.values]
         wilshire_df = pl.DataFrame(
             {"date": wilshire_dates, "wilshire": wilshire_values}
         ).drop_nulls()
 
-        # Process GDP
         gdp_dates = [d for d in gdp_s.index]
         gdp_values = [v if not math.isnan(v) else None for v in gdp_s.values]
         gdp_df = pl.DataFrame({"date": gdp_dates, "gdp": gdp_values}).drop_nulls()
 
-        # Sort, group by month, and get the last value for Wilshire
         monthly_wilshire = (
             wilshire_df.with_columns(
                 pl.col("date").dt.truncate("1mo").alias("month_start")
@@ -137,93 +205,169 @@ def main():
             .sort("month_start")
         )
 
-        # Sort, group by month, get last value, and forward fill GDP
         monthly_gdp = (
             gdp_df.with_columns(pl.col("date").dt.truncate("1mo").alias("month_start"))
             .group_by("month_start")
             .last()
             .sort("month_start")
-            .with_columns(pl.col("gdp").forward_fill())
         )
 
-        # Join Wilshire and GDP
-        buffett_df = monthly_wilshire.join(monthly_gdp, on="month_start", how="inner")
+        # Upsample GDP to full monthly calendar
+        if monthly_gdp.height > 0:
+            start = monthly_gdp["month_start"].to_list()[0]
+            end = monthly_gdp["month_start"].to_list()[-1]
+            date_range = pl.date_range(start, end, "1mo", eager=True)
+            full_months = pl.DataFrame({"month_start": date_range})
+            monthly_gdp = full_months.join(monthly_gdp, on="month_start", how="left")
+            monthly_gdp = monthly_gdp.with_columns(pl.col("gdp").forward_fill())
 
-        # Calculate ratio
+        buffett_df = monthly_wilshire.join(monthly_gdp, on="month_start", how="inner")
         buffett_df = buffett_df.with_columns(
             (pl.col("wilshire") / pl.col("gdp")).alias("value")
         )
-
-        # Format date back to string
         buffett_df = buffett_df.with_columns(pl.col("date").dt.strftime("%Y-%m-%d"))
-
         buffett_indicator = buffett_df.select(["date", "value"]).to_dicts()
     else:
-        if (
-            previous_data
-            and "series" in previous_data
-            and "buffett_indicator" in previous_data["series"]
-        ):
-            print("Using cached data for buffett_indicator")
-            buffett_indicator = previous_data["series"]["buffett_indicator"]
+        buffett_indicator = _cached_or_empty("buffett_indicator")
 
-    # Calculate Risk Score
-    risk_points = 0
-    max_points = 3
+    # --- Risk Score Calculation ---
 
-    current_sahm = float(sahm_rule[-1]["value"]) if sahm_rule else 0
-    current_yc = float(yield_curve[-1]["value"]) if yield_curve else 0
+    def _safe_last(series):
+        if not series:
+            return None
+        v = series[-1]["value"]
+        return float(v) if v is not None else None
 
-    if current_sahm >= 0.50:
-        risk_points += 1
-    if current_yc <= 0.0:
-        risk_points += 1
+    current_yc = _safe_last(yield_curve)
+    current_sahm = _safe_last(sahm_rule)
+    current_buffett = _safe_last(buffett_indicator)
+    current_lei = _safe_last(lei)
+    current_cs = _safe_last(credit_spread)
 
-    # Simple threshold for Buffett proxy: if current is > 80th percentile
+    # Sub-scores: level (continuous 0-1)
+    scoring = {}
+
+    scoring["yield_curve"] = {}
+    scoring["yield_curve"]["level"] = (
+        sub_score_linear(current_yc, 1.0, -2.0, direction="down")
+        if current_yc is not None
+        else 0.0
+    )
+    scoring["yield_curve"]["momentum"] = (
+        momentum_score(yield_curve, 6) if yield_curve else 0.0
+    )
+    scoring["yield_curve"]["weight"] = 0.40
+
+    scoring["sahm_rule"] = {}
+    scoring["sahm_rule"]["level"] = (
+        sub_score_linear(current_sahm, 0.0, 0.50, direction="up")
+        if current_sahm is not None
+        else 0.0
+    )
+    scoring["sahm_rule"]["momentum"] = (
+        momentum_score(sahm_rule, 6) if sahm_rule else 0.0
+    )
+    scoring["sahm_rule"]["weight"] = 0.25
+
+    scoring["buffett_indicator"] = {}
+    p90 = compute_rolling_percentile(buffett_indicator) if buffett_indicator else 1e9
     if buffett_indicator:
-        # Calculate threshold without pandas
-        vals = pl.Series([v["value"] for v in buffett_indicator])
-        pct_80 = vals.quantile(0.8)
-        current_buffett = float(buffett_indicator[-1]["value"])
-        if current_buffett > pct_80:
-            risk_points += 1
+        vals = pl.Series([float(v["value"]) for v in buffett_indicator])
+        median = float(vals.quantile(0.5))
+    else:
+        median = 0
+    scoring["buffett_indicator"]["level"] = (
+        sub_score_linear(current_buffett, median, p90, direction="up")
+        if current_buffett is not None
+        else 0.0
+    )
+    scoring["buffett_indicator"]["momentum"] = 0.0
+    scoring["buffett_indicator"]["weight"] = 0.15
 
-    risk_score = round((risk_points / max_points) * 100)
+    scoring["lei"] = {}
+    scoring["lei"]["level"] = (
+        sub_score_linear(current_lei, 0.0, -0.02, direction="down")
+        if current_lei is not None
+        else 0.0
+    )
+    scoring["lei"]["momentum"] = momentum_score(lei, 6) if lei else 0.0
+    scoring["lei"]["weight"] = 0.10
 
-    # Days since YC inversion
+    scoring["credit_spread"] = {}
+    scoring["credit_spread"]["level"] = (
+        sub_score_linear(current_cs, 2.0, 4.0, direction="up")
+        if current_cs is not None
+        else 0.0
+    )
+    scoring["credit_spread"]["momentum"] = (
+        momentum_score(credit_spread, 6) if credit_spread else 0.0
+    )
+    scoring["credit_spread"]["weight"] = 0.10
+
+    # Combine: 70% level + 30% momentum per signal, then weighted sum
+    weighted_sum = 0.0
+    for key, s in scoring.items():
+        combined = 0.7 * s["level"] + 0.3 * s["momentum"]
+        weighted_sum += combined * s["weight"]
+
+    # Duration modifier: inversion lasting 6-24 months adds up to +10; past 24 months discounts slightly
     days_inverted = 0
+    duration_mod = 0.0
     if yield_curve:
         yc_df = pl.DataFrame(yield_curve)
         yc_df = yc_df.with_columns(pl.col("date").str.strptime(pl.Date, "%Y-%m-%d"))
         yc_df = yc_df.sort("date", descending=True)
-
         for val in yc_df["value"]:
             if float(val) < 0:
                 days_inverted += 1
             else:
                 break
+        months_inverted = days_inverted / 30.0
+        if 6 <= months_inverted <= 24:
+            duration_mod = (months_inverted - 6) / 18.0 * 0.10
+        elif months_inverted > 24:
+            duration_mod = max(0.0, 0.10 - (months_inverted - 24) / 24.0 * 0.05)
+
+    risk_score = round((weighted_sum + duration_mod) * 100)
+    risk_score = max(0, min(100, risk_score))
+
+    # Days since inversion (for display)
+    days_since_inversion = days_inverted
 
     output_data = {
         "last_updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "risk_score": risk_score,
-        "days_since_inversion": days_inverted,
-        "current_metrics": {"sahm_rule": current_sahm, "yield_curve": current_yc},
+        "days_since_inversion": days_since_inversion,
+        "current_metrics": {
+            "sahm_rule": current_sahm,
+            "yield_curve": current_yc,
+            "buffett_indicator": current_buffett,
+            "lei": current_lei,
+            "credit_spread": current_cs,
+            "unemployment": float(unemployment[-1]["value"]) if unemployment else None,
+        },
+        "scoring": {
+            k: {
+                "level": round(v["level"], 4),
+                "momentum": round(v["momentum"], 4),
+                "weight": v["weight"],
+            }
+            for k, v in scoring.items()
+        },
         "series": {
             "yield_curve": yield_curve,
             "sahm_rule": sahm_rule,
             "buffett_indicator": buffett_indicator,
             "recession": recession,
+            "lei": lei,
+            "credit_spread": credit_spread,
+            "unemployment": unemployment,
         },
     }
 
-    # Only save if we actually fetched at least SOME new data.
-    # This ensures that if the API is entirely down or the API key is missing/invalid,
-    # we don't overwrite the file with identical data (just to update the timestamp),
-    # which would cause unnecessary Git diffs and commits.
     if fetched_any_new_data:
-        os.makedirs("data", exist_ok=True)
-        with open("data/macro_risk.json", "w") as f:
-            json.dump(output_data, f, indent=2)
+        data_path.parent.mkdir(parents=True, exist_ok=True)
+        data_path.write_text(json.dumps(output_data, indent=2))
         print("Data successfully fetched and saved to data/macro_risk.json")
     else:
         print("No new data fetched. File not modified to prevent git diffs.")

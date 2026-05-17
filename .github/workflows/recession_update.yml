@@ -2,7 +2,7 @@ name: Recession Risk Data Update
 
 on:
   schedule:
-    - cron: '0 */3 * * *'
+    - cron: '0 6,18 * * *'
   workflow_dispatch:
 
 permissions:
@@ -41,5 +41,9 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add data/macro_risk.json
-          git commit -m "Auto-update macro risk data [skip ci]" || echo "No changes to commit"
-          git push
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Auto-update macro risk data [skip ci]"
+            git push
+          fi

@@ -11,17 +11,24 @@
             --panel-bg: #111827;
             --text-color: #f3f4f6;
             --accent-red: #ef4444;
+            --accent-amber: #f59e0b;
+            --accent-yellow: #eab308;
             --accent-green: #10b981;
             --accent-blue: #3b82f6;
             --border-color: #1f2937;
             --chart-bg: #111827;
+            --gauge-green: #10b981;
+            --gauge-yellow: #84cc16;
+            --gauge-amber: #f59e0b;
+            --gauge-orange: #f97316;
+            --gauge-red: #ef4444;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
-            padding: 24px;
+            padding: 20px;
             line-height: 1.5;
         }
         h1 {
@@ -31,6 +38,7 @@
             margin-bottom: 0.25rem;
             background: linear-gradient(90deg, #60a5fa, #a78bfa);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
         h2 {
@@ -42,53 +50,82 @@
             margin-bottom: 10px;
         }
         .header-container {
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 10px;
         }
         .metrics-bar {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-            background-color: transparent;
-            margin-bottom: 20px;
+            gap: 12px;
             max-width: 1400px;
-            margin-left: auto;
-            margin-right: auto;
+            margin: 0 auto 12px;
+        }
+        .metrics-bar.row2 {
+            grid-template-columns: repeat(4, 1fr);
         }
         .metric {
             text-align: center;
             background-color: var(--panel-bg);
             border: 1px solid var(--border-color);
             border-radius: 10px;
-            padding: 15px;
+            padding: 12px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
         }
         .metric-value {
-            font-size: 1.8rem;
+            font-size: 1.7rem;
             font-weight: 800;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
         .metric-label {
-            font-size: 0.8rem;
+            font-size: 0.72rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             color: #9ca3af;
             font-weight: 600;
         }
+        .metric-sub {
+            font-size: 0.7rem;
+            color: #6b7280;
+            margin-top: 2px;
+        }
         .danger { color: var(--accent-red); }
         .safe { color: var(--accent-green); }
-        
+        .amber { color: var(--accent-amber); }
+
+        .risk-gauge {
+            width: 60px;
+            height: 30px;
+            border-radius: 30px 30px 0 0;
+            margin: 4px auto 0;
+            position: relative;
+            overflow: hidden;
+            background: conic-gradient(
+                from 180deg,
+                var(--gauge-red) 0deg 36deg,
+                var(--gauge-orange) 36deg 72deg,
+                var(--gauge-amber) 72deg 108deg,
+                var(--gauge-yellow) 108deg 144deg,
+                var(--gauge-green) 144deg 180deg
+            );
+        }
+        .risk-gauge-needle {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 2px;
+            height: 28px;
+            background: #fff;
+            transform-origin: bottom center;
+            transition: transform 0.6s ease;
+        }
+
         .panel {
             background-color: var(--panel-bg);
             border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 15px;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.25);
-            transition: transform 0.2s ease-in-out;
-        }
-        .panel:hover {
-            transform: translateY(-2px);
         }
         .full-width {
             grid-column: 1 / -1;
@@ -96,31 +133,34 @@
 
         .chart-container {
             width: 100%;
-            height: calc(100vh - 400px); /* Adaptive height to fit window without scrolling */
+            height: min(calc(100vh - 400px), 550px);
             min-height: 350px;
         }
-        /* Tabs Styling */
         .tabs-container {
             max-width: 1400px;
             margin: 0 auto;
         }
         .tabs {
             display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
+            gap: 4px;
+            margin-bottom: 16px;
             border-bottom: 2px solid var(--border-color);
+            overflow-x: auto;
+            scrollbar-width: none;
         }
+        .tabs::-webkit-scrollbar { display: none; }
         .tab-button {
             background-color: transparent;
             color: #9ca3af;
             border: none;
-            padding: 12px 24px;
-            font-size: 1rem;
+            padding: 10px 16px;
+            font-size: 0.85rem;
             font-weight: 600;
             cursor: pointer;
             border-bottom: 3px solid transparent;
             margin-bottom: -2px;
             transition: all 0.2s ease;
+            white-space: nowrap;
         }
         .tab-button:hover {
             color: var(--text-color);
@@ -128,6 +168,11 @@
         .tab-button.active {
             color: var(--accent-blue);
             border-bottom-color: var(--accent-blue);
+        }
+        .tab-button:focus-visible {
+            outline: 2px solid var(--accent-blue);
+            outline-offset: -2px;
+            border-radius: 4px;
         }
         .tab-content {
             display: none;
@@ -144,92 +189,238 @@
             margin-left: auto;
             margin-right: auto;
         }
+
+        .methodology-toggle {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .methodology-toggle button {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            color: var(--accent-blue);
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .methodology-toggle button:hover {
+            background: var(--border-color);
+        }
+        .methodology-toggle button:focus-visible {
+            outline: 2px solid var(--accent-blue);
+            outline-offset: 2px;
+        }
+        .methodology-panel {
+            display: none;
+            max-width: 800px;
+            margin: 0 auto 20px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 16px 20px;
+            font-size: 0.85rem;
+            color: #d1d5db;
+            line-height: 1.6;
+        }
+        .methodology-panel.open { display: block; }
+        .methodology-panel table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+        }
+        .methodology-panel th, .methodology-panel td {
+            padding: 6px 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .methodology-panel th {
+            color: #9ca3af;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #9ca3af;
+            padding: 40px;
+            font-style: italic;
+        }
+
+        footer {
+            text-align: center;
+            color: #6b7280;
+            font-size: 0.75rem;
+            margin-top: 30px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+            max-width: 1400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        footer a { color: #9ca3af; }
+
         @media (max-width: 1024px) {
-            .metrics-bar {
+            .metrics-bar, .metrics-bar.row2 {
                 grid-template-columns: repeat(2, 1fr);
             }
+            .tab-button { padding: 8px 12px; font-size: 0.78rem; }
         }
         @media (max-width: 768px) {
-            .dashboard-grid {
+            .metrics-bar, .metrics-bar.row2 {
                 grid-template-columns: 1fr;
             }
-            .metrics-bar {
-                grid-template-columns: 1fr;
-            }
+            body { padding: 12px; }
+            h1 { font-size: 1.5rem; }
         }
     </style>
 </head>
 <body>
 
-    <div style="text-align: right; color: #8b949e; margin-bottom: 20px; font-size: 0.85rem;">
+    <div style="text-align: right; color: #8b949e; margin-bottom: 12px; font-size: 0.85rem;" id="last-updated-wrap">
         Last Updated: <span id="last-updated">Loading...</span>
+        <span style="margin-left: 12px;" id="data-source">FRED</span>
     </div>
 
     <div class="metrics-bar">
         <div class="metric">
             <div class="metric-value" id="risk-score">--%</div>
+            <div class="risk-gauge" id="risk-gauge"><div class="risk-gauge-needle" id="risk-needle"></div></div>
             <div class="metric-label">Recession Risk Score</div>
         </div>
         <div class="metric">
-            <div class="metric-value" id="sahm-value">--</div>
-            <div class="metric-label">Sahm Rule (Threshold: 0.5)</div>
-        </div>
-        <div class="metric">
             <div class="metric-value" id="yc-value">--</div>
+            <div class="metric-sub" id="yc-status"></div>
             <div class="metric-label">10Y-2Y Spread</div>
         </div>
+        <div class="metric">
+            <div class="metric-value" id="sahm-value">--</div>
+            <div class="metric-sub" id="sahm-status"></div>
+            <div class="metric-label">Sahm Rule</div>
+        </div>
+        <div class="metric">
+            <div class="metric-value" id="buffett-value">--</div>
+            <div class="metric-sub" id="buffett-status"></div>
+            <div class="metric-label">Buffett Indicator</div>
+        </div>
+    </div>
+
+    <div class="metrics-bar row2">
         <div class="metric">
             <div class="metric-value" id="days-inverted">--</div>
             <div class="metric-label">Days Inverted</div>
         </div>
+        <div class="metric">
+            <div class="metric-value" id="lei-value">--</div>
+            <div class="metric-sub" id="lei-status"></div>
+            <div class="metric-label">LEI Change (MoM)</div>
+        </div>
+        <div class="metric">
+            <div class="metric-value" id="cs-value">--</div>
+            <div class="metric-sub" id="cs-status"></div>
+            <div class="metric-label">Baa-10Y Spread</div>
+        </div>
+        <div class="metric">
+            <div class="metric-value" id="unemp-value">--</div>
+            <div class="metric-label">Unemployment Rate</div>
+        </div>
+    </div>
+
+    <div class="methodology-toggle">
+        <button id="methodology-btn" aria-expanded="false" onclick="toggleMethodology()">How is the risk score calculated?</button>
+    </div>
+    <div class="methodology-panel" id="methodology-panel" role="region" aria-labelledby="methodology-btn">
+        <p>The <strong>Recession Risk Score</strong> (0&ndash;100) aggregates five macroeconomic signals. Each signal produces a sub-score (0&ndash;1) based on its current level and recent momentum, weighted by historical predictive power.</p>
+        <table>
+            <tr><th>Signal</th><th>Weight</th><th>What Triggers Risk</th></tr>
+            <tr><td>Yield Curve (10Y&minus;2Y)</td><td>40%</td><td>Inversion (spread &le; 0) and rapid flattening</td></tr>
+            <tr><td>Sahm Rule</td><td>25%</td><td>Approaching or exceeding 0.50 threshold</td></tr>
+            <tr><td>Buffett Indicator</td><td>15%</td><td>Above 90th percentile of recent history</td></tr>
+            <tr><td>LEI (Leading Economic Index)</td><td>10%</td><td>Negative month-over-month change</td></tr>
+            <tr><td>Credit Spread (Baa&minus;10Y)</td><td>10%</td><td>Widening above 2.0&ndash;4.0%</td></tr>
+        </table>
+        <p style="font-size:0.8rem; color:#6b7280;">Each signal&rsquo;s sub-score combines <strong>level</strong> (70%) and <strong>6-month momentum</strong> (30%). A duration bonus adds up to 10 points when the yield curve has been inverted for 6&ndash;24 months. Score caps at 100.</p>
     </div>
 
     <div class="tabs-container">
-        <div class="tabs">
-            <button class="tab-button active" onclick="openTab(event, 'tab-yc')">Yield Curve Spread</button>
-            <button class="tab-button" onclick="openTab(event, 'tab-sahm')">Sahm Rule</button>
-            <button class="tab-button" onclick="openTab(event, 'tab-buffett')">Buffett Indicator</button>
+        <div class="tabs" role="tablist" aria-label="Indicator charts">
+            <button class="tab-button active" role="tab" aria-selected="true" aria-controls="tab-yc" onclick="openTab(event, 'tab-yc')" id="tab-btn-yc">Yield Curve</button>
+            <button class="tab-button" role="tab" aria-selected="false" aria-controls="tab-sahm" onclick="openTab(event, 'tab-sahm')" id="tab-btn-sahm">Sahm Rule</button>
+            <button class="tab-button" role="tab" aria-selected="false" aria-controls="tab-buffett" onclick="openTab(event, 'tab-buffett')" id="tab-btn-buffett">Buffett Indicator</button>
+            <button class="tab-button" role="tab" aria-selected="false" aria-controls="tab-lei" onclick="openTab(event, 'tab-lei')" id="tab-btn-lei">LEI</button>
+            <button class="tab-button" role="tab" aria-selected="false" aria-controls="tab-cs" onclick="openTab(event, 'tab-cs')" id="tab-btn-cs">Credit Spread</button>
+            <button class="tab-button" role="tab" aria-selected="false" aria-controls="tab-unemp" onclick="openTab(event, 'tab-unemp')" id="tab-btn-unemp">Unemployment</button>
         </div>
-        
-        <div id="tab-yc" class="tab-content active">
+
+        <div id="tab-yc" class="tab-content active" role="tabpanel" aria-labelledby="tab-btn-yc">
             <div class="panel full-width">
                 <h2>Yield Curve (10Y - 2Y Spread)</h2>
                 <p class="indicator-desc">The Yield Curve Spread measures the difference between 10-year and 2-year Treasury yields. A negative spread (inversion) has historically been one of the most reliable leading indicators of an impending recession.</p>
                 <div id="chart-yc" class="chart-container"></div>
             </div>
         </div>
-        
-        <div id="tab-sahm" class="tab-content">
+
+        <div id="tab-sahm" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-sahm">
             <div class="panel full-width">
                 <h2>Sahm Rule Recession Indicator</h2>
                 <p class="indicator-desc">The Sahm Rule signals the start of a recession when the three-month moving average of the national unemployment rate rises by 0.50 percentage points or more relative to its low during the previous 12 months.</p>
                 <div id="chart-sahm" class="chart-container"></div>
             </div>
         </div>
-        
-        <div id="tab-buffett" class="tab-content">
+
+        <div id="tab-buffett" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-buffett">
             <div class="panel full-width">
-                <h2>Buffett Indicator (Market Cap / GDP Proxy)</h2>
+                <h2>Buffett Indicator (Total Market Cap / GDP)</h2>
                 <p class="indicator-desc">Often cited by Warren Buffett, this ratio compares total stock market valuation to GDP. An exceptionally high ratio suggests the market is overvalued and may be vulnerable to a downturn.</p>
                 <div id="chart-buffett" class="chart-container"></div>
             </div>
         </div>
+
+        <div id="tab-lei" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-lei">
+            <div class="panel full-width">
+                <h2>Leading Economic Index (LEI)</h2>
+                <p class="indicator-desc">The Conference Board's Leading Economic Index aggregates ten components that tend to shift before the economy as a whole does. A sustained negative trend signals elevated recession risk.</p>
+                <div id="chart-lei" class="chart-container"></div>
+            </div>
+        </div>
+
+        <div id="tab-cs" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-cs">
+            <div class="panel full-width">
+                <h2>Credit Spread (Baa - 10Y Treasury)</h2>
+                <p class="indicator-desc">The spread between Baa-rated corporate bonds and 10-year Treasuries reflects credit market stress. Widening spreads indicate investors are demanding higher premiums for corporate risk, a classic recession warning.</p>
+                <div id="chart-cs" class="chart-container"></div>
+            </div>
+        </div>
+
+        <div id="tab-unemp" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-unemp">
+            <div class="panel full-width">
+                <h2>Unemployment Rate (U3)</h2>
+                <p class="indicator-desc">The official unemployment rate provides context for the Sahm Rule. The Sahm Rule triggers when the 3-month moving average rises 0.50pp above its 12-month low.</p>
+                <div id="chart-unemp" class="chart-container"></div>
+            </div>
+        </div>
     </div>
 
+    <footer>
+        Data sourced from <a href="https://fred.stlouisfed.org/" target="_blank" rel="noopener">Federal Reserve Economic Data (FRED)</a> &middot;
+        Auto-updated via <a href="https://github.com/lamteteeow/lamteteeow.github.io" target="_blank" rel="noopener">GitHub</a> &middot;
+        Not financial advice
+    </footer>
+
     <script>
-        // Plotly default layout styling for Dark Mode
         const darkLayout = {
             plot_bgcolor: '#111827',
             paper_bgcolor: '#111827',
             font: { color: '#f3f4f6', family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' },
-            xaxis: { 
+            xaxis: {
                 gridcolor: '#1f2937',
                 zerolinecolor: '#1f2937',
                 type: 'date',
                 autorange: true,
                 fixedrange: false
             },
-            yaxis: { 
+            yaxis: {
                 gridcolor: '#1f2937',
                 zerolinecolor: '#4b5563',
                 autorange: true,
@@ -239,10 +430,10 @@
             showlegend: true,
             legend: {
                 orientation: 'h',
-                y: -0.2,
+                y: -0.25,
                 x: 0.5,
                 xanchor: 'center',
-                font: { size: 14 }
+                font: { size: 13 }
             },
             hovermode: 'x unified',
             hoverlabel: {
@@ -255,8 +446,6 @@
             const shapes = [];
             let inRecession = false;
             let startDate = null;
-
-            // Sort data chronologically
             recessionData.sort((a, b) => new Date(a.date) - new Date(b.date));
 
             recessionData.forEach(point => {
@@ -267,66 +456,74 @@
                 } else if (val === 0 && inRecession) {
                     inRecession = false;
                     shapes.push({
-                        type: 'rect',
-                        xref: 'x',
-                        yref: 'paper',
-                        x0: startDate,
-                        x1: point.date,
-                        y0: 0,
-                        y1: 1,
+                        type: 'rect', xref: 'x', yref: 'paper',
+                        x0: startDate, x1: point.date,
+                        y0: 0, y1: 1,
                         fillcolor: 'rgba(128, 128, 128, 0.3)',
-                        line: { width: 0 },
-                        layer: 'below'
+                        line: { width: 0 }, layer: 'below'
                     });
                 }
             });
-            // Close open recession
             if (inRecession) {
                 shapes.push({
-                    type: 'rect',
-                    xref: 'x',
-                    yref: 'paper',
-                    x0: startDate,
-                    x1: new Date().toISOString().split('T')[0],
-                    y0: 0,
-                    y1: 1,
+                    type: 'rect', xref: 'x', yref: 'paper',
+                    x0: startDate, x1: new Date().toISOString().split('T')[0],
+                    y0: 0, y1: 1,
                     fillcolor: 'rgba(128, 128, 128, 0.3)',
-                    line: { width: 0 },
-                    layer: 'below'
+                    line: { width: 0 }, layer: 'below'
                 });
             }
             return shapes;
         }
 
-        function openTab(evt, tabName) {
-            // Hide all tab contents
-            const tabContents = document.getElementsByClassName("tab-content");
-            for (let i = 0; i < tabContents.length; i++) {
-                tabContents[i].classList.remove("active");
+        function isInRecession(dateStr, shapes) {
+            const date = new Date(dateStr);
+            for (const s of shapes) {
+                if (s.type === 'rect' && date >= new Date(s.x0) && date <= new Date(s.x1)) return true;
             }
-            // Remove active class from all buttons
-            const tabButtons = document.getElementsByClassName("tab-button");
-            for (let i = 0; i < tabButtons.length; i++) {
-                tabButtons[i].classList.remove("active");
-            }
-            // Show the current tab, and add an "active" class to the button that opened the tab
-            document.getElementById(tabName).classList.add("active");
-            evt.currentTarget.classList.add("active");
+            return false;
+        }
 
-            // We need to trigger a resize event so Plotly recalculates the width of hidden charts
+        function openTab(evt, tabName) {
+            const tabContents = document.querySelectorAll(".tab-content");
+            const tabButtons = document.querySelectorAll(".tab-button");
+            tabContents.forEach(tc => tc.classList.remove("active"));
+            tabButtons.forEach(tb => { tb.classList.remove("active"); tb.setAttribute("aria-selected", "false"); });
+
+            const content = document.getElementById(tabName);
+            content.classList.add("active");
+            evt.currentTarget.classList.add("active");
+            evt.currentTarget.setAttribute("aria-selected", "true");
+
+            const chartDivs = content.querySelectorAll('.chart-container');
+            chartDivs.forEach(cd => {
+                if (cd._fullLayout) Plotly.relayout(cd, {});
+            });
             window.dispatchEvent(new Event('resize'));
         }
 
-        function isInRecession(dateStr, shapes) {
-            const date = new Date(dateStr);
-            for (let i = 0; i < shapes.length; i++) {
-                if (shapes[i].type === 'rect') {
-                    if (date >= new Date(shapes[i].x0) && date <= new Date(shapes[i].x1)) {
-                        return true;
-                    }
-                }
-            }
-            return false;
+        function toggleMethodology() {
+            const panel = document.getElementById('methodology-panel');
+            const btn = document.getElementById('methodology-btn');
+            panel.classList.toggle('open');
+            btn.setAttribute('aria-expanded', panel.classList.contains('open'));
+        }
+
+        function makeChartTraces(name, series, color) {
+            return [{
+                x: series.map(d => d.date),
+                y: series.map(d => parseFloat(d.value)),
+                type: 'scatter', mode: 'lines',
+                name: name,
+                line: { color: color, width: 2 }
+            }];
+        }
+
+        function makeHoverTemplate(xData, recessionShapes, label) {
+            return xData.map(date => {
+                const rText = isInRecession(date, recessionShapes) ? "<br><b>Status: In Recession</b>" : "";
+                return `%{x}<br>${label}: %{y:.2f}${rText}<extra></extra>`;
+            });
         }
 
         async function initDashboard() {
@@ -335,80 +532,101 @@
                 if (!response.ok) throw new Error('Data file not found');
                 const data = await response.json();
 
-                // Update UI Metrics
                 document.getElementById('last-updated').textContent = new Date(data.last_updated).toLocaleString();
-                
+
+                const score = data.risk_score;
                 const scoreEl = document.getElementById('risk-score');
-                scoreEl.textContent = `${data.risk_score}%`;
-                scoreEl.className = `metric-value ${data.risk_score >= 66 ? 'danger' : data.risk_score <= 33 ? 'safe' : ''}`;
+                scoreEl.textContent = `${score}%`;
+                if (score >= 81) scoreEl.className = 'metric-value danger';
+                else if (score >= 61) scoreEl.className = 'metric-value amber';
+                else if (score <= 20) scoreEl.className = 'metric-value safe';
+                else scoreEl.className = 'metric-value';
 
-                const sahmEl = document.getElementById('sahm-value');
-                const sahmVal = data.current_metrics.sahm_rule;
-                sahmEl.textContent = sahmVal != null ? sahmVal.toFixed(2) : '--';
-                sahmEl.className = `metric-value ${sahmVal >= 0.5 ? 'danger' : 'safe'}`;
+                const needle = document.getElementById('risk-needle');
+                needle.style.transform = `rotate(${(score / 100) * 180 - 90}deg)`;
 
-                const ycEl = document.getElementById('yc-value');
-                const ycVal = data.current_metrics.yield_curve;
-                ycEl.textContent = ycVal != null ? `${ycVal.toFixed(2)}%` : '--';
-                ycEl.className = `metric-value ${ycVal <= 0 ? 'danger' : 'safe'}`;
-
-                document.getElementById('days-inverted').textContent = data.days_since_inversion;
-
-                const recessionShapes = generateRecessionShapes(data.series.recession);
-
-                // Apply custom hover text format for all charts
-                function generateHoverTemplate(xData, shapes, metricName) {
-                    return xData.map(date => {
-                        const recessionText = isInRecession(date, recessionShapes) ? "<br><b>Status: In Recession</b>" : "";
-                        return `%{x}<br>${metricName}: %{y:.2f}${recessionText}<extra></extra>`;
-                    });
+                function setMetric(id, val, fmt, statusEl, dangerCond, statusLabel, unit) {
+                    const el = document.getElementById(id);
+                    const isNull = val == null;
+                    el.textContent = isNull ? '--' : fmt(val);
+                    const classes = ['metric-value'];
+                    if (!isNull && dangerCond(val)) classes.push('danger');
+                    else if (!isNull) classes.push('safe');
+                    el.className = classes.join(' ');
+                    if (statusEl) {
+                        const st = document.getElementById(statusEl);
+                        st.textContent = isNull ? '' : (dangerCond(val) ? statusLabel || '' : '');
+                    }
                 }
 
-                // Chart 1: Yield Curve
-                const ycLayout = { ...darkLayout, shapes: [
-                    ...recessionShapes,
+                const m = data.current_metrics;
+                setMetric('yc-value', m.yield_curve, v => `${v.toFixed(2)}%`, 'yc-status', v => v <= 0, '▲ Inverted');
+                setMetric('sahm-value', m.sahm_rule, v => v.toFixed(2), 'sahm-status', v => v >= 0.5, '▲ Above 0.50');
+                setMetric('buffett-value', m.buffett_indicator, v => v.toFixed(2), 'buffett-status', v => v > 0, null);
+                document.getElementById('days-inverted').textContent = data.days_since_inversion != null ? data.days_since_inversion : '--';
+                setMetric('lei-value', m.lei, v => v.toFixed(4), 'lei-status', v => v < 0, '▼ Negative');
+                setMetric('cs-value', m.credit_spread, v => `${v.toFixed(2)}%`, 'cs-status', v => v > 3.0, '▲ Elevated');
+                const uel = document.getElementById('unemp-value');
+                uel.textContent = m.unemployment != null ? `${m.unemployment.toFixed(1)}%` : '--';
+                uel.className = 'metric-value';
+
+                const recessionShapes = generateRecessionShapes(data.series.recession || []);
+                const recessionLegendTrace = {
+                    x: [null], y: [null],
+                    type: 'scatter', mode: 'lines',
+                    name: 'NBER Recession',
+                    line: { color: 'rgba(128, 128, 128, 0.3)', width: 6 },
+                    showlegend: true
+                };
+
+                function plotSeries(divId, series, seriesName, color, extraShapes, label, multiSeries) {
+                    const container = document.getElementById(divId);
+                    if (!series || series.length === 0) {
+                        container.innerHTML = '<div class="no-data">Data temporarily unavailable &mdash; will retry next update</div>';
+                        return;
+                    }
+                    const layout = JSON.parse(JSON.stringify(darkLayout));
+                    layout.shapes = [...recessionShapes, ...(extraShapes || [])];
+
+                    let traces = [];
+                    if (Array.isArray(multiSeries)) {
+                        multiSeries.forEach(ms => {
+                            const t = makeChartTraces(ms.name, ms.data, ms.color);
+                            t[0].hovertemplate = makeHoverTemplate(ms.data.map(d => d.date), recessionShapes, ms.name);
+                            traces.push(t[0]);
+                        });
+                    } else {
+                        traces = makeChartTraces(seriesName, series, color);
+                        traces[0].hovertemplate = makeHoverTemplate(series.map(d => d.date), recessionShapes, label || seriesName);
+                    }
+                    traces.push(recessionLegendTrace);
+                    Plotly.newPlot(divId, traces, layout, { responsive: true });
+                }
+
+                plotSeries('chart-yc', data.series.yield_curve, '10Y-2Y Spread', '#58a6ff', [
                     { type: 'line', xref: 'paper', x0: 0, x1: 1, y0: 0, y1: 0, line: { color: '#ff7b72', width: 2, dash: 'dash' } }
-                ]};
-                Plotly.newPlot('chart-yc', [{
-                    x: data.series.yield_curve.map(d => d.date),
-                    y: data.series.yield_curve.map(d => parseFloat(d.value)),
-                    type: 'scatter',
-                    mode: 'lines',
-                    name: '10Y-2Y Spread',
-                    line: { color: '#58a6ff', width: 2 },
-                    hovertemplate: generateHoverTemplate(data.series.yield_curve.map(d => d.date), recessionShapes, "Spread")
-                }], ycLayout, {responsive: true});
+                ], 'Spread');
 
-                // Chart 2: Sahm Rule
-                const sahmLayout = { ...darkLayout, shapes: [
-                    ...recessionShapes,
+                plotSeries('chart-sahm', data.series.sahm_rule, 'Sahm Indicator', '#d2a8ff', [
                     { type: 'line', xref: 'paper', x0: 0, x1: 1, y0: 0.5, y1: 0.5, line: { color: '#ff7b72', width: 2, dash: 'dash' } }
-                ]};
-                Plotly.newPlot('chart-sahm', [{
-                    x: data.series.sahm_rule.map(d => d.date),
-                    y: data.series.sahm_rule.map(d => parseFloat(d.value)),
-                    type: 'scatter',
-                    mode: 'lines',
-                    name: 'Sahm Indicator',
-                    line: { color: '#d2a8ff', width: 2 },
-                    hovertemplate: generateHoverTemplate(data.series.sahm_rule.map(d => d.date), recessionShapes, "Value")
-                }], sahmLayout, {responsive: true});
+                ], 'Value');
 
-                // Chart 3: Buffett Indicator
-                const buffettLayout = { ...darkLayout, shapes: recessionShapes };
-                Plotly.newPlot('chart-buffett', [{
-                    x: data.series.buffett_indicator.map(d => d.date),
-                    y: data.series.buffett_indicator.map(d => parseFloat(d.value)),
-                    type: 'scatter',
-                    mode: 'lines',
-                    name: 'Market Cap / GDP Proxy',
-                    line: { color: '#3fb950', width: 2 },
-                    hovertemplate: generateHoverTemplate(data.series.buffett_indicator.map(d => d.date), recessionShapes, "Ratio")
-                }], buffettLayout, {responsive: true});
+                plotSeries('chart-buffett', data.series.buffett_indicator, 'Market Cap / GDP', '#3fb950', [], 'Ratio');
+
+                plotSeries('chart-lei', data.series.lei, 'LEI', '#f59e0b', [
+                    { type: 'line', xref: 'paper', x0: 0, x1: 1, y0: 0, y1: 0, line: { color: '#ff7b72', width: 2, dash: 'dash' } }
+                ], 'Value');
+
+                plotSeries('chart-cs', data.series.credit_spread, 'Baa-10Y Spread', '#a78bfa', [
+                    { type: 'line', xref: 'paper', x0: 0, x1: 1, y0: 3.0, y1: 3.0, line: { color: '#ff7b72', width: 2, dash: 'dash' } }
+                ], 'Spread');
+
+                plotSeries('chart-unemp', data.series.unemployment, 'Unemployment (U3)', '#f87171', [], 'Rate');
 
             } catch (error) {
                 console.error("Error loading dashboard data:", error);
                 document.getElementById('risk-score').textContent = 'Error';
+                document.getElementById('risk-score').className = 'metric-value danger';
             }
         }
 
