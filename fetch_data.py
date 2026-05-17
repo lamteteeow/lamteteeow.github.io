@@ -185,9 +185,17 @@ def main():
     if wilshire_s is not None and gdp_s is not None:
         fetched_any_new_data = True
         wilshire_df = (
-            pl.DataFrame(wilshire_s).rename({"value": "wilshire"}).drop_nulls()
+            pl.DataFrame(wilshire_s)
+            .rename({"value": "wilshire"})
+            .with_columns(pl.col("date").str.strptime(pl.Date, "%Y-%m-%d"))
+            .drop_nulls()
         )
-        gdp_df = pl.DataFrame(gdp_s).rename({"value": "gdp"}).drop_nulls()
+        gdp_df = (
+            pl.DataFrame(gdp_s)
+            .rename({"value": "gdp"})
+            .with_columns(pl.col("date").str.strptime(pl.Date, "%Y-%m-%d"))
+            .drop_nulls()
+        )
 
         monthly_wilshire = (
             wilshire_df.with_columns(
