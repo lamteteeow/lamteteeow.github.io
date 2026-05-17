@@ -182,19 +182,12 @@ def main():
         except Exception:
             gdp_s = None
 
-    import math
-
     if wilshire_s is not None and gdp_s is not None:
         fetched_any_new_data = True
-        wilshire_dates = [d for d in wilshire_s.index]
-        wilshire_values = [v if not math.isnan(v) else None for v in wilshire_s.values]
-        wilshire_df = pl.DataFrame(
-            {"date": wilshire_dates, "wilshire": wilshire_values}
-        ).drop_nulls()
-
-        gdp_dates = [d for d in gdp_s.index]
-        gdp_values = [v if not math.isnan(v) else None for v in gdp_s.values]
-        gdp_df = pl.DataFrame({"date": gdp_dates, "gdp": gdp_values}).drop_nulls()
+        wilshire_df = (
+            pl.DataFrame(wilshire_s).rename({"value": "wilshire"}).drop_nulls()
+        )
+        gdp_df = pl.DataFrame(gdp_s).rename({"value": "gdp"}).drop_nulls()
 
         monthly_wilshire = (
             wilshire_df.with_columns(
