@@ -20,5 +20,9 @@ dev = [
     "pytest>=8.0.0",
 ]
 
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+
 [tool.hatch.build.targets.wheel]
 packages = ["."]
