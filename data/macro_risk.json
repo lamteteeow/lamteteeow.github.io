@@ -1,10 +1,10 @@
 {
-  "last_updated": "2026-05-18T19:26:46Z",
-  "risk_score": 27,
+  "last_updated": "2026-05-19T09:01:05Z",
+  "risk_score": 25,
   "days_since_inversion": 0,
   "current_metrics": {
     "sahm_rule": 0.13,
-    "yield_curve": 0.5,
+    "yield_curve": 0.54,
     "buffett_indicator": 0.21782314224800484,
     "lei": 1.72,
     "credit_spread": 1.62,
@@ -12,8 +12,8 @@
   },
   "scoring": {
     "yield_curve": {
-      "level": 0.1667,
-      "momentum": 0.0907,
+      "level": 0.1533,
+      "momentum": 0.0181,
       "weight": 0.4
     },
     "sahm_rule": {
@@ -2436,8 +2436,8 @@
         "value": 0.52
       },
       {
-        "date": "2026-05-15",
-        "value": 0.5
+        "date": "2026-05-18",
+        "value": 0.54
       }
     ],
     "sahm_rule": [
@@ -12090,7 +12090,7 @@
         "value": 1.7
       },
       {
-        "date": "2026-05-14",
+        "date": "2026-05-15",
         "value": 1.62
       }
     ],
