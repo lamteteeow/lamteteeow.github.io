@@ -1,13 +1,13 @@
 {
-  "last_updated": "2026-05-19T19:44:06Z",
-  "risk_score": 25,
+  "last_updated": "2026-05-20T08:55:42Z",
+  "risk_score": 26,
   "days_since_inversion": 0,
   "current_metrics": {
     "sahm_rule": 0.13,
     "yield_curve": 0.54,
     "buffett_indicator": 0.21782314224800484,
     "lei": 1.72,
-    "credit_spread": 1.62,
+    "credit_spread": 1.59,
     "unemployment": 4.3
   },
   "scoring": {
@@ -33,7 +33,7 @@
     },
     "credit_spread": {
       "level": 0.0,
-      "momentum": 0.0898,
+      "momentum": 0.1067,
       "weight": 0.1
     }
   },
@@ -2436,7 +2436,7 @@
         "value": 0.52
       },
       {
-        "date": "2026-05-18",
+        "date": "2026-05-19",
         "value": 0.54
       }
     ],
@@ -12090,8 +12090,8 @@
         "value": 1.7
       },
       {
-        "date": "2026-05-15",
-        "value": 1.62
+        "date": "2026-05-18",
+        "value": 1.59
       }
     ],
     "unemployment": [
