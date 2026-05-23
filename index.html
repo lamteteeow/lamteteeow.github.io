@@ -62,7 +62,7 @@
             margin: 0 auto 12px;
         }
         .metrics-bar.row2 {
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(6, 1fr);
         }
         .metric {
             text-align: center;
@@ -325,20 +325,32 @@
             <div class="metric-value" id="unemp-value">--</div>
             <div class="metric-label">Unemployment Rate</div>
         </div>
+        <div class="metric">
+            <div class="metric-value" id="cape-value">--</div>
+            <div class="metric-sub" id="cape-status"></div>
+            <div class="metric-label">Shiller CAPE</div>
+        </div>
+        <div class="metric">
+            <div class="metric-value" id="sentiment-value">--</div>
+            <div class="metric-sub" id="sentiment-status"></div>
+            <div class="metric-label">Consumer Sentiment</div>
+        </div>
     </div>
 
     <div class="methodology-toggle">
         <button id="methodology-btn" aria-expanded="false" onclick="toggleMethodology()">How is the risk score calculated?</button>
     </div>
     <div class="methodology-panel" id="methodology-panel" role="region" aria-labelledby="methodology-btn">
-        <p>The <strong>Recession Risk Score</strong> (0&ndash;100) aggregates five macroeconomic signals. Each signal produces a sub-score (0&ndash;1) based on its current level and recent momentum, weighted by historical predictive power.</p>
+        <p>The <strong>Recession Risk Score</strong> (0&ndash;100) aggregates seven macroeconomic signals. Each signal produces a sub-score (0&ndash;1) based on its current level and recent momentum, weighted by historical predictive power.</p>
         <table>
             <tr><th>Signal</th><th>Weight</th><th>What Triggers Risk</th></tr>
-            <tr><td>Yield Curve (10Y&minus;2Y)</td><td>40%</td><td>Inversion (spread &le; 0) and rapid flattening</td></tr>
-            <tr><td>Sahm Rule</td><td>25%</td><td>Approaching or exceeding 0.50 threshold</td></tr>
+            <tr><td>Yield Curve (10Y&minus;2Y)</td><td>35%</td><td>Inversion (spread &le; 0) and rapid flattening</td></tr>
+            <tr><td>Sahm Rule</td><td>20%</td><td>Approaching or exceeding 0.50 threshold</td></tr>
             <tr><td>Buffett Indicator</td><td>15%</td><td>Above 90th percentile of recent history</td></tr>
             <tr><td>LEI (Leading Economic Index)</td><td>10%</td><td>Negative month-over-month change</td></tr>
             <tr><td>Credit Spread (Baa&minus;10Y)</td><td>10%</td><td>Widening above 2.0&ndash;4.0%</td></tr>
+            <tr><td>Shiller CAPE</td><td>5%</td><td>Above 90th percentile of recent history</td></tr>
+            <tr><td>Consumer Sentiment</td><td>5%</td><td>Declining confidence, especially below 70</td></tr>
         </table>
         <p style="font-size:0.8rem; color:#6b7280;">Each signal&rsquo;s sub-score combines <strong>level</strong> (70%) and <strong>6-month momentum</strong> (30%). A duration bonus adds up to 10 points when the yield curve has been inverted for 6&ndash;24 months. Score caps at 100.</p>
     </div>
@@ -351,6 +363,8 @@
             <button class="tab-button" role="tab" aria-selected="false" aria-controls="tab-lei" onclick="openTab(event, 'tab-lei')" id="tab-btn-lei">LEI</button>
             <button class="tab-button" role="tab" aria-selected="false" aria-controls="tab-cs" onclick="openTab(event, 'tab-cs')" id="tab-btn-cs">Credit Spread</button>
             <button class="tab-button" role="tab" aria-selected="false" aria-controls="tab-unemp" onclick="openTab(event, 'tab-unemp')" id="tab-btn-unemp">Unemployment</button>
+            <button class="tab-button" role="tab" aria-selected="false" aria-controls="tab-cape" onclick="openTab(event, 'tab-cape')" id="tab-btn-cape">Shiller CAPE</button>
+            <button class="tab-button" role="tab" aria-selected="false" aria-controls="tab-sentiment" onclick="openTab(event, 'tab-sentiment')" id="tab-btn-sentiment">Consumer Sentiment</button>
         </div>
 
         <div id="tab-yc" class="tab-content active" role="tabpanel" aria-labelledby="tab-btn-yc">
@@ -398,6 +412,22 @@
                 <h2>Unemployment Rate (U3)</h2>
                 <p class="indicator-desc">The official unemployment rate provides context for the Sahm Rule. The Sahm Rule triggers when the 3-month moving average rises 0.50pp above its 12-month low.</p>
                 <div id="chart-unemp" class="chart-container"></div>
+            </div>
+        </div>
+
+        <div id="tab-cape" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-cape">
+            <div class="panel full-width">
+                <h2>Shiller CAPE (Cyclically Adjusted P/E)</h2>
+                <p class="indicator-desc">Developed by Nobel laureate Robert Shiller, the CAPE ratio divides the S&P 500 price by the 10-year moving average of inflation-adjusted earnings. A ratio above 30 signals elevated long-term valuations.</p>
+                <div id="chart-cape" class="chart-container"></div>
+            </div>
+        </div>
+
+        <div id="tab-sentiment" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-sentiment">
+            <div class="panel full-width">
+                <h2>Consumer Sentiment (University of Michigan)</h2>
+                <p class="indicator-desc">The University of Michigan Consumer Sentiment Index surveys households on their economic outlook. Sharp declines often precede recessions as consumers reduce spending and increase precautionary saving.</p>
+                <div id="chart-sentiment" class="chart-container"></div>
             </div>
         </div>
     </div>
@@ -569,6 +599,8 @@
                 const uel = document.getElementById('unemp-value');
                 uel.textContent = m.unemployment != null ? `${m.unemployment.toFixed(1)}%` : '--';
                 uel.className = 'metric-value';
+                setMetric('cape-value', m.cape, v => v.toFixed(1), 'cape-status', v => v > 30, '▲ Elevated');
+                setMetric('sentiment-value', m.consumer_sentiment, v => v.toFixed(0), 'sentiment-status', v => v < 70, '▼ Low');
 
                 const recessionShapes = generateRecessionShapes(data.series.recession || []);
                 const recessionLegendTrace = {
@@ -622,6 +654,14 @@
                 ], 'Spread');
 
                 plotSeries('chart-unemp', data.series.unemployment, 'Unemployment (U3)', '#f87171', [], 'Rate');
+
+                plotSeries('chart-cape', data.series.cape, 'Shiller CAPE', '#f97316', [
+                    { type: 'line', xref: 'paper', x0: 0, x1: 1, y0: 30, y1: 30, line: { color: '#ff7b72', width: 2, dash: 'dash' } }
+                ], 'CAPE');
+
+                plotSeries('chart-sentiment', data.series.consumer_sentiment, 'Consumer Sentiment', '#22d3ee', [
+                    { type: 'line', xref: 'paper', x0: 0, x1: 1, y0: 70, y1: 70, line: { color: '#ff7b72', width: 2, dash: 'dash' } }
+                ], 'Index');
 
             } catch (error) {
                 console.error("Error loading dashboard data:", error);
