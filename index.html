@@ -344,15 +344,15 @@
         <p>The <strong>Recession Risk Score</strong> (0&ndash;100) aggregates seven macroeconomic signals. Each signal produces a sub-score (0&ndash;1) based on its current level and recent momentum, weighted by historical predictive power.</p>
         <table>
             <tr><th>Signal</th><th>Weight</th><th>What Triggers Risk</th></tr>
-            <tr><td>Yield Curve (10Y&minus;2Y)</td><td>35%</td><td>Inversion (spread &le; 0) and rapid flattening</td></tr>
-            <tr><td>Sahm Rule</td><td>20%</td><td>Approaching or exceeding 0.50 threshold</td></tr>
-            <tr><td>Buffett Indicator</td><td>15%</td><td>Above 90th percentile of recent history</td></tr>
-            <tr><td>LEI (Leading Economic Index)</td><td>10%</td><td>Negative month-over-month change</td></tr>
-            <tr><td>Credit Spread (Baa&minus;10Y)</td><td>10%</td><td>Widening above 2.0&ndash;4.0%</td></tr>
-            <tr><td>Shiller CAPE</td><td>5%</td><td>Above 90th percentile of recent history</td></tr>
-            <tr><td>Consumer Sentiment</td><td>5%</td><td>Declining confidence, especially below 70</td></tr>
+            <tr><td>Yield Curve (10Y&minus;2Y)</td><td>40%</td><td>Sustained deviation from historical norm; inversion or rapid flattening</td></tr>
+            <tr><td>Credit Spread (Baa&minus;10Y)</td><td>20%</td><td>Significant widening signals corporate bond market stress</td></tr>
+            <tr><td>Sahm Rule</td><td>15%</td><td>Real-time labor market deterioration toward recession threshold</td></tr>
+            <tr><td>LEI (Leading Economic Index)</td><td>12%</td><td>Sustained negative deviation from long-term trend</td></tr>
+            <tr><td>Buffett Indicator</td><td>5%</td><td>Market cap significantly above historical GDP ratio</td></tr>
+            <tr><td>Consumer Sentiment</td><td>5%</td><td>Declining consumer confidence below historical norm</td></tr>
+            <tr><td>Shiller CAPE</td><td>3%</td><td>Cyclically-adjusted P/E well above historical average</td></tr>
         </table>
-        <p style="font-size:0.8rem; color:#6b7280;">Each signal&rsquo;s sub-score combines <strong>level</strong> (70%) and <strong>6-month momentum</strong> (30%). A duration bonus adds up to 10 points when the yield curve has been inverted for 6&ndash;24 months. Score caps at 100.</p>
+        <p style="font-size:0.8rem; color:#6b7280;">Each signal&rsquo;s sub-score uses a <strong>z-score</strong> (standard deviations above/below full historical mean), mapped to 0&ndash;1 where 2&sigma; = full risk. Level contributes 70% and 6-month momentum 30%. A duration bonus adds up to 10 points when the yield curve has been inverted for 6&ndash;24 months. Score caps at 100.</p>
     </div>
 
     <div class="tabs-container">

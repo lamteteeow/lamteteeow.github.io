@@ -66,6 +66,24 @@ def sub_score_linear(value, low, high, direction="up"):
         return (low - value) / (low - high)
 
 
+def z_score_sub_score(value, series, direction="up"):
+    """Z-score based risk sub-score in [0,1].
+    Computes z = (value - mean) / std over full history,
+    maps to [0,1] via clamp(z/2, 0, 1) for 'up', clamp(-z/2, 0, 1) for 'down'."""
+    if value is None or not series or len(series) < 4:
+        return 0.0
+    vals = pl.Series([float(v["value"]) for v in series])
+    mean = float(vals.mean())
+    std = float(vals.std())
+    if std == 0:
+        return 0.0
+    z = (value - mean) / std
+    if direction == "up":
+        return max(0.0, min(1.0, z / 2.0))
+    else:
+        return max(0.0, min(1.0, -z / 2.0))
+
+
 def momentum_score(series, months=6):
     """Risk score [0,1] based on how quickly a series is moving in the risky direction."""
     if not series or len(series) < 2:
@@ -285,79 +303,67 @@ def main():
 
     scoring["yield_curve"] = {}
     scoring["yield_curve"]["level"] = (
-        sub_score_linear(current_yc, 1.0, -2.0, direction="down")
+        z_score_sub_score(current_yc, yield_curve, direction="down")
         if current_yc is not None
         else 0.0
     )
     scoring["yield_curve"]["momentum"] = (
         momentum_score(yield_curve, 6) if yield_curve else 0.0
     )
-    scoring["yield_curve"]["weight"] = 0.35
+    scoring["yield_curve"]["weight"] = 0.40
 
     scoring["sahm_rule"] = {}
     scoring["sahm_rule"]["level"] = (
-        sub_score_linear(current_sahm, 0.0, 0.50, direction="up")
+        z_score_sub_score(current_sahm, sahm_rule, direction="up")
         if current_sahm is not None
         else 0.0
     )
     scoring["sahm_rule"]["momentum"] = (
         momentum_score(sahm_rule, 6) if sahm_rule else 0.0
     )
-    scoring["sahm_rule"]["weight"] = 0.20
+    scoring["sahm_rule"]["weight"] = 0.15
 
     scoring["buffett_indicator"] = {}
-    p90 = compute_rolling_percentile(buffett_indicator) if buffett_indicator else 1e9
-    if buffett_indicator:
-        vals = pl.Series([float(v["value"]) for v in buffett_indicator])
-        median = float(vals.quantile(0.5))
-    else:
-        median = 0
     scoring["buffett_indicator"]["level"] = (
-        sub_score_linear(current_buffett, median, p90, direction="up")
+        z_score_sub_score(current_buffett, buffett_indicator, direction="up")
         if current_buffett is not None
         else 0.0
     )
     scoring["buffett_indicator"]["momentum"] = 0.0
-    scoring["buffett_indicator"]["weight"] = 0.15
+    scoring["buffett_indicator"]["weight"] = 0.05
 
     scoring["lei"] = {}
     scoring["lei"]["level"] = (
-        sub_score_linear(current_lei, 0.0, -0.02, direction="down")
+        z_score_sub_score(current_lei, lei, direction="down")
         if current_lei is not None
         else 0.0
     )
     scoring["lei"]["momentum"] = momentum_score(lei, 6) if lei else 0.0
-    scoring["lei"]["weight"] = 0.10
+    scoring["lei"]["weight"] = 0.12
 
     scoring["credit_spread"] = {}
     scoring["credit_spread"]["level"] = (
-        sub_score_linear(current_cs, 2.0, 4.0, direction="up")
+        z_score_sub_score(current_cs, credit_spread, direction="up")
         if current_cs is not None
         else 0.0
     )
     scoring["credit_spread"]["momentum"] = (
         momentum_score(credit_spread, 6) if credit_spread else 0.0
     )
-    scoring["credit_spread"]["weight"] = 0.10
+    scoring["credit_spread"]["weight"] = 0.20
 
     scoring["cape"] = {}
-    capes_p90 = compute_rolling_percentile(cape) if cape else 1e9
-    if cape:
-        cape_vals = pl.Series([float(v["value"]) for v in cape])
-        cape_median = float(cape_vals.quantile(0.5))
-    else:
-        cape_median = 0
     scoring["cape"]["level"] = (
-        sub_score_linear(current_cape, cape_median, capes_p90, direction="up")
+        z_score_sub_score(current_cape, cape, direction="up")
         if current_cape is not None
         else 0.0
     )
     scoring["cape"]["momentum"] = 0.0
-    scoring["cape"]["weight"] = 0.05
+    scoring["cape"]["weight"] = 0.03
 
     scoring["consumer_sentiment"] = {}
     scoring["consumer_sentiment"]["level"] = (
-        sub_score_linear(current_sentiment, 100.0, 60.0, direction="down")
+        z_score_sub_score(current_sentiment, consumer_sentiment, direction="down")
         if current_sentiment is not None
         else 0.0
     )
