@@ -194,8 +194,8 @@ def main():
     # 3. Recession shading
     recession = fetch_with_fallback("USRECP", "recession")
 
-    # 4. LEI (Leading Economic Index)
-    lei = fetch_with_fallback("USSLIND", "lei")
+    # 4. LEI (Brave-Butters-Kelley Leading Index – replaces discontinued USSLIND)
+    lei = fetch_with_fallback("BBKMLEIX", "lei")
 
     # 5. Credit spread
     credit_spread = fetch_with_fallback("BAA10Y", "credit_spread")
