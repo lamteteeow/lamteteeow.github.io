@@ -1,11 +1,6 @@
 {
-<<<<<<< HEAD
-  "last_updated": "2026-05-28T09:48:18Z",
+  "last_updated": "2026-05-28T17:22:03Z",
   "risk_score": 21,
-=======
-  "last_updated": "2026-05-24T01:03:36Z",
-  "risk_score": 19,
->>>>>>> ef8cf55 (ft: add opencode-agent to the repo)
   "days_since_inversion": 0,
   "current_metrics": {
     "sahm_rule": 0.13,
@@ -19,13 +14,8 @@
   },
   "scoring": {
     "yield_curve": {
-<<<<<<< HEAD
       "level": 0.2013,
       "momentum": 0.127,
-=======
-      "level": 0.2287,
-      "momentum": 0.2178,
->>>>>>> ef8cf55 (ft: add opencode-agent to the repo)
       "weight": 0.4
     },
     "sahm_rule": {
@@ -45,11 +35,7 @@
     },
     "credit_spread": {
       "level": 0.0,
-<<<<<<< HEAD
       "momentum": 0.1235,
-=======
-      "momentum": 0.1067,
->>>>>>> ef8cf55 (ft: add opencode-agent to the repo)
       "weight": 0.2
     },
     "cape": {
