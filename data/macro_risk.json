@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-06-01T21:22:40Z",
+  "last_updated": "2026-06-02T10:06:51Z",
   "risk_score": 42,
   "days_since_inversion": 0,
   "current_metrics": {
@@ -5160,10 +5160,6 @@
     ],
     "buffett_indicator": [
       {
-        "date": "2016-05-31",
-        "value": 0.11206676976792383
-      },
-      {
         "date": "2016-06-30",
         "value": 0.11216831050430368
       },
@@ -8331,6 +8327,10 @@
       },
       {
         "date": "2026-04-01",
+        "value": 0.0
+      },
+      {
+        "date": "2026-05-01",
         "value": 0.0
       }
     ],
