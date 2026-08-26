@@ -1,11 +1,11 @@
 {
-  "last_updated": "2026-08-26T06:32:19Z",
+  "last_updated": "2026-08-26T19:39:51Z",
   "risk_score": 27,
   "days_since_inversion": 0,
   "current_metrics": {
     "sahm_rule": -0.03,
     "yield_curve": 0.47,
-    "buffett_indicator": 0.22198501564731993,
+    "buffett_indicator": 0.2219108340172676,
     "lei": -0.5191225492603063,
     "credit_spread": 1.63,
     "unemployment": 4.1,
@@ -5645,7 +5645,7 @@
       },
       {
         "date": "2026-04-30",
-        "value": 0.22198501564731993
+        "value": 0.2219108340172676
       }
     ],
     "recession": [
