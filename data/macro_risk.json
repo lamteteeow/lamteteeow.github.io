@@ -1,21 +1,21 @@
 {
-  "last_updated": "2026-08-28T17:55:28Z",
-  "risk_score": 25,
+  "last_updated": "2026-08-29T01:20:49Z",
+  "risk_score": 28,
   "days_since_inversion": 0,
   "current_metrics": {
     "sahm_rule": -0.03,
-    "yield_curve": 0.47,
+    "yield_curve": 0.39,
     "buffett_indicator": 0.2219108340172676,
     "lei": -0.5191225492603063,
-    "credit_spread": 1.61,
+    "credit_spread": 1.6,
     "unemployment": 4.1,
     "cape": 39.41935320301406,
     "consumer_sentiment": 55.2
   },
   "scoring": {
     "yield_curve": {
-      "level": 0.206,
-      "momentum": 0.0783,
+      "level": 0.25,
+      "momentum": 0.2348,
       "weight": 0.4
     },
     "sahm_rule": {
@@ -35,7 +35,7 @@
     },
     "credit_spread": {
       "level": 0.0,
-      "momentum": 0.1055,
+      "momentum": 0.1061,
       "weight": 0.2
     },
     "cape": {
@@ -2460,8 +2460,8 @@
         "value": 0.47
       },
       {
-        "date": "2026-08-27",
-        "value": 0.47
+        "date": "2026-08-28",
+        "value": 0.39
       }
     ],
     "sahm_rule": [
@@ -13030,8 +13030,8 @@
         "value": 1.63
       },
       {
-        "date": "2026-08-26",
-        "value": 1.61
+        "date": "2026-08-27",
+        "value": 1.6
       }
     ],
     "unemployment": [
