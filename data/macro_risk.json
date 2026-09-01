@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-08-31T22:12:41Z",
+  "last_updated": "2026-09-01T10:49:40Z",
   "risk_score": 28,
   "days_since_inversion": 0,
   "current_metrics": {
@@ -5179,10 +5179,6 @@
       }
     ],
     "buffett_indicator": [
-      {
-        "date": "2016-08-31",
-        "value": 0.1149098334012522
-      },
       {
         "date": "2016-09-30",
         "value": 0.11476797921137434
