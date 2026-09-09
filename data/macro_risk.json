@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-09-08T20:31:28Z",
+  "last_updated": "2026-09-09T10:27:41Z",
   "risk_score": 29,
   "days_since_inversion": 0,
   "current_metrics": {
@@ -2464,7 +2464,7 @@
         "value": 0.41
       },
       {
-        "date": "2026-09-04",
+        "date": "2026-09-08",
         "value": 0.41
       }
     ],
