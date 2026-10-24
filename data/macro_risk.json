@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-10-23T20:49:19Z",
+  "last_updated": "2026-10-24T10:01:20Z",
   "risk_score": 31,
   "days_since_inversion": 0,
   "current_metrics": {
@@ -7,7 +7,7 @@
     "yield_curve": 0.31,
     "buffett_indicator": 0.22138633904768693,
     "lei": -0.3419604619,
-    "credit_spread": 1.44,
+    "credit_spread": 1.46,
     "unemployment": 4.2,
     "cape": 39.41935320301406,
     "consumer_sentiment": 48.1
@@ -35,7 +35,7 @@
     },
     "credit_spread": {
       "level": 0.0,
-      "momentum": 0.1529,
+      "momentum": 0.1411,
       "weight": 0.2
     },
     "cape": {
@@ -2468,7 +2468,7 @@
         "value": 0.41
       },
       {
-        "date": "2026-10-22",
+        "date": "2026-10-23",
         "value": 0.31
       }
     ],
@@ -13062,8 +13062,8 @@
         "value": 1.47
       },
       {
-        "date": "2026-10-21",
-        "value": 1.44
+        "date": "2026-10-22",
+        "value": 1.46
       }
     ],
     "unemployment": [
