@@ -29,7 +29,10 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version-file: "pyproject.toml"
+          # Pin a version with binary wheels for numpy/pandas in uv.lock.
+          # ">=3.10" resolved to 3.15, which has no cp315 wheels: uv built
+          # numpy/pandas from source and the job segfaulted (exit 139).
+          python-version: "3.13"
 
       - name: Run data fetch
         env:
